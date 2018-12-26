@@ -2,7 +2,6 @@ package org.kwicket.builder.generator
 
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
-import org.apache.commons.io.input.TaggedInputStream
 import org.apache.wicket.Component
 import org.apache.wicket.behavior.Behavior
 import org.apache.wicket.devutils.debugbar.DebugBar
@@ -166,7 +165,8 @@ fun main() {
     val buttonConfig = ConfigInfo(
         componentInfo = ComponentInfo(target = Button::class),
         parent = abstractButtonConfig,
-        modelInfo = ModelInfo(type = TargetType.Exact, target = String::class)
+        modelInfo = ModelInfo(type = TargetType.Exact, target = String::class),
+        tagInfo = TagInfo(defaultTagName = "button") // FIXME: do we want to get null info from the parent?
     )
 
     val generatorInfo = GeneratorInfo(
@@ -192,8 +192,10 @@ fun main() {
 
     KWicketBuilder(generatorInfo = generatorInfo, builder = FileSpec.builder("com.andrew", "andrew")).apply {
         allComponents.forEach {
-            it.toBuilderInterface()
-            it.toBuilderClass()
+            it.toConfigInterface()
+            it.toConfigClass()
+            it.toTagClass()
+            it.toTagMethod(true)
         }
     }.write(System.out)
 

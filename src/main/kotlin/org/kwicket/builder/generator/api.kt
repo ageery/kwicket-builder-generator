@@ -1,153 +1,189 @@
 package org.kwicket.builder.generator
 
 import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import kotlinx.html.HtmlBlockTag
+import kotlinx.html.TagConsumer
 import java.io.File
-import kotlin.reflect.KClass
 
-enum class KdocOption(val add: Boolean, val eol: String) {
-    None(false, ""),
-    Method(true, ""),
-    Constructor(true, "\n")
-}
-
-class ClassInfo(val toPackage: ConfigInfo.() -> String, val toName: ConfigInfo.() -> String)
-
-fun ConfigInfo.toClassName(classInfo: ClassInfo) = ClassName(classInfo.toPackage(this), classInfo.toName(this))
-
-class GeneratorInfo(
-    val configInterface: ClassInfo,
-    val configClass: ClassInfo,
-    val factoryMethod: ClassInfo,
-    val includeMethod: ClassInfo,
-    val tagClass: ClassInfo,
-    val tagMethod: ClassInfo,
-    val componentParameterName: String = "C",
-    val modelParameterName: String = "T"
-)
-
-val ConfigInfo.allParentProps: List<PropInfo>
-    get() = parent?.let { it.allParentProps + it.props } ?: emptyList()
-
-fun ConfigInfo.toConfigInterfaceName(generatorInfo: GeneratorInfo) = toClassName(generatorInfo.configInterface)
-fun ConfigInfo.toConfigClassName(generatorInfo: GeneratorInfo) = toClassName(generatorInfo.configClass)
-fun ConfigInfo.toFactoryMethodName(generatorInfo: GeneratorInfo) = toClassName(generatorInfo.factoryMethod)
-fun ConfigInfo.toIncludeMethodName(generatorInfo: GeneratorInfo) = toClassName(generatorInfo.includeMethod)
-fun ConfigInfo.toTagClassName(generatorInfo: GeneratorInfo) = toClassName(generatorInfo.tagClass)
-fun ConfigInfo.toTagMethodName(generatorInfo: GeneratorInfo) = toClassName(generatorInfo.tagMethod)
-fun ConfigInfo.toModelTypeVarName(generatorInfo: GeneratorInfo) = TypeVariableName(generatorInfo.modelParameterName)
-fun ConfigInfo.toComponentTypeVarName(generatorInfo: GeneratorInfo) =
-    TypeVariableName(
-        generatorInfo.componentParameterName, componentInfo.target.asClassName()
-            .parameterizedBy(if (componentInfo.isTargetParameterizedByModel) generatorInfo.toModelTypeVarName() else null)
-    )
-
-val ConfigInfo.allProps: List<PropInfo>
-    get() = props + allParentProps
-
-fun GeneratorInfo.toModelTypeVarName() = TypeVariableName(modelParameterName)
-fun GeneratorInfo.toComponentTypeVarName() = TypeVariableName(componentParameterName)
-
-enum class TargetType {
-    Exact,
-    Unbounded
-}
-
-class ModelInfo(
-    val type: TargetType = TargetType.Unbounded,
-    val target: KClass<*> = Any::class,
-    val nullable: Boolean = true,
-    val kdoc: String? = null
-)
-
-class ComponentInfo(
-    val target: KClass<*>,
-    val isTargetParameterizedByModel: Boolean = !target.typeParameters.isNullOrEmpty(),
-    val kdoc: String? = null
-)
-
-fun ModelInfo.toParamTypeName(modelParamTypeName: ParameterizedTypeName) = when (type) {
-    TargetType.Unbounded -> modelParamTypeName
-    TargetType.Exact -> target.asClassName()
-}
-
-//fun ComponentInfo.toCompParamTypeName(modelParamTypeName: ParameterizedTypeName) = when (isTargetParameterizedByModel) {
-//    true -> target.asClassName().parameterizedBy(modelParamTypeName)
-//    false -> target.asClassName()
-//}
-
-data class PropInfo(
-    val name: String,
-    val type: ConfigInfo.(TypeName) -> TypeName,
-    val mutable: Boolean = true,
-    val default: CodeBlock? = CodeBlock.of(nullDefault),
-    val desc: PropInfo.() -> String = { "info about $name" }
-)
-
-class TagInfo(
-    val defaultTagName: String = "div",
-    val defaultAttrs: Map<String, String> = emptyMap()
-)
-
-class ConfigInfo(
-    val componentInfo: ComponentInfo,
-    val modelInfo: ModelInfo = ModelInfo(),
-    val isConfigOnly: Boolean = componentInfo.target.isAbstract,
-    val basename: String = componentInfo.target.java.simpleName,
-    val parent: ConfigInfo? = null,
-    val props: List<PropInfo> = emptyList(),
-    val tagInfo: TagInfo = TagInfo(),
-    val configInterfaceKdoc: (GeneratorInfo) -> String = {
-        "Configuration for creating a [${componentInfo.target.simpleName}] component."
-    },
-    val configClassKdoc: (GeneratorInfo) -> String = {
-        "Implementation of [${componentInfo.target.simpleName}]."
-    }
-)
 
 class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Builder) {
 
-    fun ConfigInfo.toBuilderInterface() = builder.addType(
-        TypeSpec.interfaceBuilder(toConfigInterfaceName(generatorInfo)).apply {
+    fun ConfigInfo.toConfigInterface() = builder.addType(
+        TypeSpec.interfaceBuilder(toConfigInterfaceName()).apply {
             addKdoc("${configInterfaceKdoc.invoke(generatorInfo)}\n\n")
-            if (isConfigOnly) addTypeVariable(toComponentTypeVarName(generatorInfo))
-            if (modelInfo.type == TargetType.Unbounded) addTypeVariable(toModelTypeVarName(generatorInfo))
-            props.forEach { addProp(propInfo = it, configInfo = this@toBuilderInterface, superClassProp = false) }
+            if (isConfigOnly) addTypeVariable(toComponentTypeVarName())
+            if (modelInfo.type == TargetType.Unbounded) addTypeVariable(generatorInfo.toModelTypeVarName())
+            props.forEach { addProp(propInfo = it, builder = this, superClassProp = false) }
             parent?.let {
                 addSuperinterface(
-                    it.toConfigInterfaceName(generatorInfo)
-                        .parameterizedBy(toSuperInterfaceComponentParameter(), toSuperInterfaceModelParameter())
+                    it.toConfigInterfaceName().parameterizedBy(
+                        toSuperInterfaceComponentParameter(),
+                        toSuperInterfaceModelParameter()
+                    )
                 )
             }
         }.build()
     )
 
-    fun ConfigInfo.toBuilderClass() = builder.addType(
-        TypeSpec.classBuilder(toConfigClassName(generatorInfo)).apply {
+    fun ConfigInfo.toConfigClass() = builder.addType(
+        TypeSpec.classBuilder(toConfigClassName()).apply {
             if (isConfigOnly) {
                 addModifiers(KModifier.OPEN)
-                addTypeVariable(toComponentTypeVarName(generatorInfo))
+                addTypeVariable(toComponentTypeVarName())
             }
             addKdoc("${configClassKdoc.invoke(generatorInfo)}\n\n")
             primaryConstructor(toConstructor())
             addSuperinterface(
-                toConfigInterfaceName(generatorInfo).parameterizedBy(
+                toConfigInterfaceName().parameterizedBy(
                     if (isConfigOnly) toSuperInterfaceComponentParameter() else null,
-                    if (modelInfo.type == TargetType.Unbounded) toSuperInterfaceModelParameter() else null
+                    toModelTypeVarName()
                 )
             )
-            if (modelInfo.type == TargetType.Unbounded) addTypeVariable(toModelTypeVarName(generatorInfo))
-            props.forEach { addProp(propInfo = it, configInfo = this@toBuilderClass, superClassProp = true) }
+            if (modelInfo.type == TargetType.Unbounded) addTypeVariable(generatorInfo.toModelTypeVarName())
+            props.forEach { addProp(propInfo = it, builder = this, superClassProp = true) }
             addSuperClass(this)
+        }.build()
+    )
+
+    fun ConfigInfo.toTagClass() = builder.addType(
+        TypeSpec.classBuilder(toTagClassName()).apply {
+            if (modelInfo.type == TargetType.Unbounded) addTypeVariable(generatorInfo.toModelTypeVarName())
+            addSuperinterface(HtmlBlockTag::class.asTypeName())
+            addSuperinterface(
+                superinterface = toConfigInterfaceName().parameterizedBy(toModelTypeVarName()),
+                delegate = CodeBlock.of(tagBuilderParamName)
+            )
+            superclass(toTagSuperClass())
+            primaryConstructor(FunSpec.constructorBuilder().apply {
+                tagClassParams().forEach {
+                    addSuperclassConstructorParameter("${it.name} = ${it.name}")
+                    addParam(propInfo = it, kdoc = KdocOption.Constructor, configInfo = this@toTagClass)
+                }
+            }.build())
+        }.build()
+    )
+
+    fun ConfigInfo.toTagMethod(parameterized: Boolean = true) = builder.addFunction(
+        FunSpec.builder(generatorInfo.tagMethod.toName(this)).apply {
+            if (modelInfo.type == TargetType.Unbounded) addTypeVariable(generatorInfo.toModelTypeVarName())
+            receiver(htmlTagTypeName)
+            (allProps + listOf(
+                idProp(isNullable = true),
+                toTagNamePropInfo(),
+                toInitialParamsPropInfo(),
+                toTagBlockPropInfo()
+            )).forEach {
+                addParam(
+                    it,
+                    kdoc = KdocOption.Method,
+                    configInfo = this@toTagMethod
+                )
+            }
+            addCode(toTagMethodBody(propInfoList = allProps))
         }.build()
     )
 
     fun write(dir: File) = builder.build().writeTo(dir)
     fun write(out: Appendable) = builder.build().writeTo(out)
 
+    private fun ConfigInfo.toModelTypeVarName() =
+        if (modelInfo.type == TargetType.Unbounded) generatorInfo.toModelTypeVarName() else null
+
+    private fun ConfigInfo.targetWithGeneric() =
+        componentInfo.target.asTypeName().parameterizedBy(toModelTypeVarName())
+
+    private fun ConfigInfo.toConfigInterfaceName() = toClassName(generatorInfo.configInterface)
+    private fun ConfigInfo.toConfigClassName() = toClassName(generatorInfo.configClass)
+    private fun ConfigInfo.toTagClassName() = toClassName(generatorInfo.tagClass)
+    private fun ConfigInfo.toComponentTypeVarName() =
+        TypeVariableName(
+            generatorInfo.componentParameterName, componentInfo.target.asClassName()
+                .parameterizedBy(if (componentInfo.isTargetParameterizedByModel) generatorInfo.toModelTypeVarName() else null)
+        )
+
+    private fun ConfigInfo.toTagMethodBody(propInfoList: List<PropInfo>): CodeBlock =
+        CodeBlock.of(
+            """%T(id = id, tagName = tagName, initialAttributes = initialAttributes, consumer = consumer, config = %T(%L)).%T(%L)""",
+            toTagClassName(), toConfigClassName(),
+            propInfoList.joinToString(separator = ", ") { "${it.name} = ${it.name}" }, visitMethod, blockParmName
+        )
+
+    private fun ConfigInfo.toTagBlockPropInfo() = PropInfo(
+        name = "block",
+        default = emptyLambda,
+        type = {
+            LambdaTypeName.get(
+                returnType = Unit::class.asTypeName(),
+                receiver = toTagClassName().parameterizedBy(toModelTypeVarName())
+            )
+        },
+        desc = { "Tag configuration block" },
+        mutable = false
+    )
+
+    private fun idProp(isNullable: Boolean = false) = PropInfo(
+        name = "id", type = { nullableStringTypeName },
+        default = if (isNullable) CodeBlock.of(nullDefault) else null, mutable = false, desc = { "Wicket component id" }
+    )
+
+    private fun ConfigInfo.toTagNamePropInfo() = PropInfo(
+        name = "tagName", type = { stringTypeName },
+        default = CodeBlock.of(""""${tagInfo.defaultTagName}""""), mutable = false, desc = { "Name of the HTML tag" }
+    )
+
+    private fun toInitialParamsPropInfo() = PropInfo(
+        name = "initialAttributes", type = { stringMapTypeName },
+        default = CodeBlock.of("emptyMap()"), mutable = false, desc = { "Tag attributes" }
+    )
+
+    private val consumerPropInfo = PropInfo(
+        name = "consumer", default = null, type = {
+            TagConsumer::class.asTypeName()
+                .parameterizedBy(ClassName("", "*"))
+        }
+    )
+
+    private fun toConfigPropInfo() = PropInfo(
+        name = "config", default = null, type = {
+            toConfigInterfaceName().parameterizedBy(generatorInfo.toModelTypeVarName())
+        }
+    )
+
+    private fun ConfigInfo.tagClassParams() = listOf(
+        idProp(isNullable = true),
+        toTagNamePropInfo(),
+        toInitialParamsPropInfo(),
+        consumerPropInfo,
+        toConfigPropInfo(),
+        toFactoryPropInfo()
+    )
+
+    private fun toFactoryPropInfo() = PropInfo(
+        name = "factory",
+        default = CodeBlock.of("{ cid, c -> c.%T(cid) }", factoryInvokeTypeName),
+        type = {
+            LambdaTypeName.get(
+                returnType = targetWithGeneric(),
+                parameters = *arrayOf(
+                    stringTypeName,
+                    toConfigInterfaceName().parameterizedBy(toModelTypeVarName())
+                )
+            )
+        }
+    )
+
+    private fun ConfigInfo.toTagSuperClass() = configurableComponentTagTypeName
+        .parameterizedBy(
+            toSuperInterfaceModelParameter() ?: modelInfo.target.asClassName(),
+            toSuperInterfaceComponentParameter(),
+            toConfigInterfaceName().parameterizedBy(toSuperInterfaceModelParameter())
+        )
+
     private fun ConfigInfo.addSuperClass(builder: TypeSpec.Builder) {
         if (parent != null) {
             builder.superclass(
-                parent.toConfigClassName(generatorInfo).parameterizedBy(
+                parent.toConfigClassName().parameterizedBy(
                     toSuperInterfaceComponentParameter(),
                     toSuperInterfaceModelParameter()
                 )
@@ -161,7 +197,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
         addParameter(
             ParameterSpec.builder(propInfo.name, propInfo.type(configInfo, generatorInfo.toModelTypeVarName())).also {
                 propInfo.default?.let { defaultValue -> it.defaultValue(defaultValue) }
-                if (kdoc.add) it.addKdoc("${propInfo.desc}${kdoc.eol}")
+                if (kdoc.add) it.addKdoc("${propInfo.desc.invoke(propInfo)}${kdoc.eol}")
             }.build()
         )
 
@@ -182,8 +218,8 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
         .apply { if (superClassProp) initializer(name) }
         .build()
 
-    private fun TypeSpec.Builder.addProp(propInfo: PropInfo, configInfo: ConfigInfo, superClassProp: Boolean) =
-        addProperty(propInfo.toPropertySpec(configInfo, superClassProp = superClassProp))
+    private fun ConfigInfo.addProp(propInfo: PropInfo, builder: TypeSpec.Builder, superClassProp: Boolean) =
+        builder.addProperty(propInfo.toPropertySpec(this, superClassProp = superClassProp))
             .addKdoc("@property ${propInfo.name} ${propInfo.desc.invoke(propInfo)}\n")
 
     private fun ConfigInfo.toSuperInterfaceComponentParameter() =
