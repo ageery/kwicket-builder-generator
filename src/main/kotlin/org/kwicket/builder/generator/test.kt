@@ -77,7 +77,7 @@ fun main() {
             PropInfo(
                 name = "statelessHint",
                 type = { ClassName("org.kwicket.builder.config", "StatelessHint").copy(nullable = false) },
-                default = CodeBlock.of("StatelessHint.Default"),
+                default = { CodeBlock.of("StatelessHint.Default") },
                 desc = { "type of stateless hint for the component" }
             ),
             PropInfo(
@@ -113,7 +113,7 @@ fun main() {
                 name = "isInitiallyExpanded",
                 type = { nullableBooleanTypeName },
                 desc = { "whether the debug is initially expanded" },
-                default = CodeBlock.of("true")
+                default = { CodeBlock.of("true") }
             )
         )
     )

@@ -16,16 +16,13 @@ data class PropInfo(
     val name: String,
     val type: ConfigInfo.(TypeContext) -> TypeName,
     val mutable: Boolean = true,
-    val default: CodeBlock? = CodeBlock.of(nullDefault),
+    val default: (ConfigInfo.() -> CodeBlock?)? = { CodeBlock.of(nullDefault) },
     val desc: PropInfo.() -> String = { "info about $name" }
 )
 
-// FIXME: other things we would like to be able to pass to the type lambda:
-// - GeneratorInfo
-// - type of what is being generated -- config interface, config class, include method, tag class, tag method
-// - whether the model parameter is named -- Boolean
-// - type of the model
-
+/**
+ * Type of code being generated.
+ */
 enum class GeneratorType {
     ConfigInterface,
     ConfigClass,
@@ -34,6 +31,14 @@ enum class GeneratorType {
     TagMethod
 }
 
+/**
+ * Context info about the type being generated.
+ *
+ * @property generatorInfo naming information
+ * @property type type of code being generated
+ * @property isModelParameterNamed whether the model parameter is named
+ * @property modelTypeName name of the generic parameter of the model
+ */
 class TypeContext(
     val generatorInfo: GeneratorInfo,
     val type: GeneratorType,
