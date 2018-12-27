@@ -14,7 +14,7 @@ import com.squareup.kotlinpoet.TypeName
  */
 data class PropInfo(
     val name: String,
-    val type: ConfigInfo.(TypeName) -> TypeName,
+    val type: ConfigInfo.(TypeContext) -> TypeName,
     val mutable: Boolean = true,
     val default: CodeBlock? = CodeBlock.of(nullDefault),
     val desc: PropInfo.() -> String = { "info about $name" }
@@ -34,9 +34,9 @@ enum class GeneratorType {
     TagMethod
 }
 
-class TypeInfo(
+class TypeContext(
     val generatorInfo: GeneratorInfo,
     val type: GeneratorType,
     val isModelParameterNamed: Boolean = true,
-    val modelName: TypeName
+    val modelTypeName: TypeName
 )
