@@ -8,6 +8,9 @@ import kotlinx.html.TagConsumer
 import org.apache.wicket.MarkupContainer
 import java.io.File
 
+// FIXME: we want to be able to create both parameterized and unparameterized versions of the include and tag methods
+// FIXME: are the parameters being documented?
+
 class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Builder) {
 
     fun ConfigInfo.toConfigInterface() = builder.addType(

@@ -17,10 +17,7 @@ import org.apache.wicket.model.IModel
 fun main() {
 
     val componentConfig = ConfigInfo(
-        componentInfo = ComponentInfo(
-            target = Component::class,
-            kdoc = "My kdoc"
-        ),
+        componentInfo = ComponentInfo(target = Component::class),
         modelInfo = ModelInfo(),
         props = listOf(
             PropInfo(
