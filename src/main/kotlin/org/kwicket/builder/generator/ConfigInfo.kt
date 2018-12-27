@@ -9,14 +9,29 @@ class ConfigInfo(
     val basename: String = componentInfo.target.java.simpleName,
     val parent: ConfigInfo? = null,
     val props: List<PropInfo> = emptyList(),
-    val tagInfo: TagInfo = TagInfo(),
-    val configInterfaceKdoc: (GeneratorInfo) -> String = {
+    val tagInfo: TagInfo? = null,
+    val configInterfaceKdoc: ConfigInfo.(GeneratorInfo) -> String = {
         "Configuration for creating a [${componentInfo.target.simpleName}] component."
     },
-    val configClassKdoc: (GeneratorInfo) -> String = {
-        "Implementation of [${componentInfo.target.simpleName}]."
+    val configClassKdoc: ConfigInfo.(GeneratorInfo) -> String = {
+        "Implementation of [${it.configInterface.toName.invoke(this)}]."
+    },
+    val tagClassKdoc: ConfigInfo.(GeneratorInfo) -> String = {
+        "HTML tag class corresponding to the [${componentInfo.target.simpleName}] component."
+    },
+    val tagMethodKdoc: ConfigInfo.(GeneratorInfo) -> String = {
+        "Adds the [${componentInfo.target.simpleName}] component to the HTML."
+    },
+    val includeMethodKdoc: ConfigInfo.(GeneratorInfo) -> String = {
+        "Creates and includes the [${componentInfo.target.simpleName}] component in a [MarkupContainer]."
     }
 )
+
+val ConfigInfo.defaultTagName: String
+     get() = tagInfo?.tagName ?: parent?.defaultTagName ?: "div"
+
+val ConfigInfo.defaultTagAttrs: Map<String, String>
+    get() = tagInfo?.attrs ?: parent?.defaultTagAttrs ?: emptyMap()
 
 val ConfigInfo.allParentProps: List<PropInfo>
     get() = parent?.let { it.allParentProps + it.props } ?: emptyList()

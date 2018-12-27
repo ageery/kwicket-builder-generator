@@ -8,20 +8,21 @@ import kotlinx.html.Tag
 import kotlinx.html.visit
 import org.apache.wicket.model.IModel
 
+// generic types
+
 internal val stringTypeName = String::class.asTypeName()
 internal val nullableStringTypeName = String::class.asTypeName().copy(nullable = true)
+internal val nullableBooleanTypeName = Boolean::class.asTypeName().copy(nullable = true)
 internal val stringMapTypeName = Map::class.asTypeName().parameterizedBy(stringTypeName, stringTypeName)
+internal val nullableStringModelTypeName =
+    IModel::class.asTypeName().parameterizedBy(String::class.asTypeName()).copy(nullable = true)
 
-// FIXME: ultimately, we'll just want to depend on this library
+// kwicket classes
+
 internal val configurableComponentTagTypeName = ClassName("org.kwicket.builder.dsl", "ConfigurableComponentTag")
 internal val factoryInvokeTypeName = ClassName("org.kwicket.builder.factory", "invoke")
-internal val htmlTagTypeName = HTMLTag::class.asTypeName()
 
-// FIXME: get rid of the functions and replace with vals
-fun stringType(nullable: Boolean = true) = String::class.asTypeName().copy(nullable = nullable)
-fun booleanType(nullable: Boolean = true) = Boolean::class.asTypeName().copy(nullable = nullable)
-fun stringModelType(nullable: Boolean = true) =
-    IModel::class.asTypeName().parameterizedBy(String::class.asTypeName()).copy(nullable = nullable)
+// methods
 
-val visitMethod = ClassName("kotlinx.html", "visit") // FIXME: can we reference this?
-//val x = Tag::visit
+internal val visitMethod = ClassName("kotlinx.html", "visit")
+val qMethodTypeName = ClassName("org.kwicket.builder.queued", "q")

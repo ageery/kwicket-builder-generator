@@ -2,16 +2,17 @@ package org.kwicket.builder.generator
 
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import kotlinx.html.HTMLTag
 import kotlinx.html.HtmlBlockTag
 import kotlinx.html.TagConsumer
+import org.apache.wicket.MarkupContainer
 import java.io.File
-
 
 class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Builder) {
 
     fun ConfigInfo.toConfigInterface() = builder.addType(
         TypeSpec.interfaceBuilder(toConfigInterfaceName()).apply {
-            addKdoc("${configInterfaceKdoc.invoke(generatorInfo)}\n\n")
+            addKdoc("${configInterfaceKdoc.invoke(this@toConfigInterface, generatorInfo)}\n\n")
             if (isConfigOnly) addTypeVariable(toComponentTypeVarName())
             if (modelInfo.type == TargetType.Unbounded) addTypeVariable(generatorInfo.toModelTypeVarName())
             props.forEach { addProp(propInfo = it, builder = this, superClassProp = false) }
@@ -28,11 +29,11 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
 
     fun ConfigInfo.toConfigClass() = builder.addType(
         TypeSpec.classBuilder(toConfigClassName()).apply {
+            addKdoc("${configClassKdoc.invoke(this@toConfigClass, generatorInfo)}\n\n")
             if (isConfigOnly) {
                 addModifiers(KModifier.OPEN)
                 addTypeVariable(toComponentTypeVarName())
             }
-            addKdoc("${configClassKdoc.invoke(generatorInfo)}\n\n")
             primaryConstructor(toConstructor())
             addSuperinterface(
                 toConfigInterfaceName().parameterizedBy(
@@ -48,6 +49,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
 
     fun ConfigInfo.toTagClass() = builder.addType(
         TypeSpec.classBuilder(toTagClassName()).apply {
+            addKdoc("${tagClassKdoc.invoke(this@toTagClass, generatorInfo)}\n\n")
             if (modelInfo.type == TargetType.Unbounded) addTypeVariable(generatorInfo.toModelTypeVarName())
             addSuperinterface(HtmlBlockTag::class.asTypeName())
             addSuperinterface(
@@ -66,8 +68,9 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
 
     fun ConfigInfo.toTagMethod(parameterized: Boolean = true) = builder.addFunction(
         FunSpec.builder(generatorInfo.tagMethod.toName(this)).apply {
+            addKdoc("${tagMethodKdoc.invoke(this@toTagMethod, generatorInfo)}\n\n")
             if (modelInfo.type == TargetType.Unbounded) addTypeVariable(generatorInfo.toModelTypeVarName())
-            receiver(htmlTagTypeName)
+            receiver(HTMLTag::class.asTypeName())
             (allProps + listOf(
                 idProp(isNullable = true),
                 toTagNamePropInfo(),
@@ -84,8 +87,53 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
         }.build()
     )
 
+    fun ConfigInfo.toIncludeMethod(parameterized: Boolean = true) = builder.addFunction(
+        FunSpec.builder(generatorInfo.includeMethod.toName(this)).apply {
+            addKdoc("${includeMethodKdoc.invoke(this@toIncludeMethod, generatorInfo)}\n\n")
+            if (modelInfo.type == TargetType.Unbounded) addTypeVariable(generatorInfo.toModelTypeVarName())
+            receiver(MarkupContainer::class)
+            returns(targetWithGeneric())
+            addParam(idProp(), kdoc = KdocOption.Method, configInfo = this@toIncludeMethod)
+            allProps.forEach {
+                addParam(
+                    it,
+                    kdoc = KdocOption.Method,
+                    configInfo = this@toIncludeMethod
+                )
+            }
+            addParam(
+                toIncludeBlockPropInfo(),
+                kdoc = KdocOption.Method,
+                configInfo = this@toIncludeMethod
+            )
+            addCode(toIncludeMethodBody(propInfoList = allProps))
+        }.build()
+    )
+
     fun write(dir: File) = builder.build().writeTo(dir)
     fun write(out: Appendable) = builder.build().writeTo(out)
+
+    private fun ConfigInfo.toBuilderClassCreation(propInfoList: List<PropInfo>) =
+        CodeBlock.of(
+            """%T(${propInfoList.map { "${it.name} = ${it.name}" }.joinToString(", ")})""",
+            toConfigClassName()
+        )
+
+    private fun ConfigInfo.toIncludeMethodBody(propInfoList: List<PropInfo>) = CodeBlock.of(
+        """return %T(id = id, block = block, factory = { cid, config -> config.%T(cid) }, config = %L)""",
+        qMethodTypeName, toClassName(generatorInfo.factoryMethod), toBuilderClassCreation(propInfoList)
+    )
+
+    private fun ConfigInfo.toIncludeBlockPropInfo() =
+        PropInfo(
+            name = "block", mutable = true, desc = { "optional block to execute to configure the component" },
+            default = CodeBlock.of(nullDefault), type = {
+                LambdaTypeName.get(
+                    receiver = toConfigInterfaceName().parameterizedBy(toModelTypeVarName()),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            }
+        )
 
     private fun ConfigInfo.toModelTypeVarName() =
         if (modelInfo.type == TargetType.Unbounded) generatorInfo.toModelTypeVarName() else null
@@ -106,7 +154,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
         CodeBlock.of(
             """%T(id = id, tagName = tagName, initialAttributes = initialAttributes, consumer = consumer, config = %T(%L)).%T(%L)""",
             toTagClassName(), toConfigClassName(),
-            propInfoList.joinToString(separator = ", ") { "${it.name} = ${it.name}" }, visitMethod, blockParmName
+            propInfoList.joinToString(", ") { "${it.name} = ${it.name}" }, visitMethod, blockParmName
         )
 
     private fun ConfigInfo.toTagBlockPropInfo() = PropInfo(
@@ -129,12 +177,12 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
 
     private fun ConfigInfo.toTagNamePropInfo() = PropInfo(
         name = "tagName", type = { stringTypeName },
-        default = CodeBlock.of(""""${tagInfo.defaultTagName}""""), mutable = false, desc = { "Name of the HTML tag" }
+        default = CodeBlock.of(""""$defaultTagName""""), mutable = false, desc = { "Name of the HTML tag" }
     )
 
-    private fun toInitialParamsPropInfo() = PropInfo(
+    private fun ConfigInfo.toInitialParamsPropInfo() = PropInfo(
         name = "initialAttributes", type = { stringMapTypeName },
-        default = CodeBlock.of("emptyMap()"), mutable = false, desc = { "Tag attributes" }
+        default = defaultTagAttrs.toLiteralMapCodeBlock(), mutable = false, desc = { "Tag attributes" }
     )
 
     private val consumerPropInfo = PropInfo(

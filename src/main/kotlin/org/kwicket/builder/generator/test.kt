@@ -30,41 +30,41 @@ fun main() {
             ),
             PropInfo(
                 name = "markupId",
-                type = { stringType() },
+                type = { nullableStringTypeName },
                 desc = { "optional unique id to use in the associated markup" }
             ),
             PropInfo(
                 name = "outputMarkupId",
-                type = { booleanType() },
+                type = { nullableBooleanTypeName },
                 desc = { "whether to include an id for the component in the markup" }),
             PropInfo(
                 name = "outputMarkupPlaceholderTag",
-                type = { booleanType() },
+                type = { nullableBooleanTypeName },
                 desc = { "whether to include a placeholder tag for the component in the markup when the component is not visible" }
             ),
             PropInfo(
                 name = "isVisible",
-                type = { booleanType() },
+                type = { nullableBooleanTypeName },
                 desc = { "whether the component is initially visible" }
             ),
             PropInfo(
                 name = "isEnabled",
-                type = { booleanType() },
+                type = { nullableBooleanTypeName },
                 desc = { "whether the component is initially enabled" }
             ),
             PropInfo(
                 name = "isVisibilityAllowed",
-                type = { booleanType() },
+                type = { nullableBooleanTypeName },
                 desc = { "whether the component is initially allowed to be visible" }
             ),
             PropInfo(
                 name = "escapeModelStrings",
-                type = { booleanType() },
+                type = { nullableBooleanTypeName },
                 desc = { "whether the component model strings should be escaped" }
             ),
             PropInfo(
                 name = "renderBodyOnly",
-                type = { booleanType() },
+                type = { nullableBooleanTypeName },
                 desc = { "whether to only render the body of the component" }
             ),
             PropInfo(
@@ -105,7 +105,7 @@ fun main() {
     val labelConfig = ConfigInfo(
         componentInfo = ComponentInfo(target = Label::class),
         parent = componentConfig,
-        tagInfo = TagInfo(defaultTagName = "span")
+        tagInfo = TagInfo(tagName = "span")
     )
 
     val debugBarConfig = ConfigInfo(
@@ -114,7 +114,7 @@ fun main() {
         props = listOf(
             PropInfo(
                 name = "isInitiallyExpanded",
-                type = { booleanType() },
+                type = { nullableBooleanTypeName },
                 desc = { "whether the debug is initially expanded" },
                 default = CodeBlock.of("true")
             )
@@ -124,7 +124,7 @@ fun main() {
     val multiLineLabelConfig = ConfigInfo(
         componentInfo = ComponentInfo(target = MultiLineLabel::class),
         parent = componentConfig,
-        tagInfo = TagInfo(defaultTagName = "span")
+        tagInfo = TagInfo(tagName = "span")
     )
 
     val formComponentConfig = ConfigInfo(
@@ -134,7 +134,7 @@ fun main() {
         props = listOf(
             PropInfo(
                 name = "label",
-                type = { stringModelType() },
+                type = { nullableStringModelTypeName },
                 desc = { "label associated with the form component" }
             )
         )
@@ -143,20 +143,20 @@ fun main() {
     val textFieldConfig = ConfigInfo(
         componentInfo = ComponentInfo(target = TextField::class, isTargetParameterizedByModel = true),
         parent = formComponentConfig,
-        tagInfo = TagInfo(defaultTagName = "input", defaultAttrs = mapOf("type" to "text"))
+        tagInfo = TagInfo(tagName = "input", attrs = mapOf("type" to "text"))
     )
 
     val abstractButtonConfig = ConfigInfo(
         basename = "AbstractButton",
         componentInfo = ComponentInfo(target = Button::class),
         modelInfo = ModelInfo(type = TargetType.Exact, target = String::class),
-        tagInfo = TagInfo(defaultTagName = "button"),
+        tagInfo = TagInfo(tagName = "button"),
         isConfigOnly = true,
         parent = componentConfig,
         props = listOf(
             PropInfo(
                 name = "defaultFormProcessing",
-                type = { booleanType() },
+                type = { nullableBooleanTypeName },
                 desc = { "whether the button submits the data" }
             )
         )
@@ -165,8 +165,7 @@ fun main() {
     val buttonConfig = ConfigInfo(
         componentInfo = ComponentInfo(target = Button::class),
         parent = abstractButtonConfig,
-        modelInfo = ModelInfo(type = TargetType.Exact, target = String::class),
-        tagInfo = TagInfo(defaultTagName = "button") // FIXME: do we want to get null info from the parent?
+        modelInfo = ModelInfo(type = TargetType.Exact, target = String::class)
     )
 
     val generatorInfo = GeneratorInfo(
@@ -196,6 +195,7 @@ fun main() {
             it.toConfigClass()
             it.toTagClass()
             it.toTagMethod(true)
+            it.toIncludeMethod(true)
         }
     }.write(System.out)
 
