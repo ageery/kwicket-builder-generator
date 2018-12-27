@@ -9,13 +9,14 @@ import org.apache.wicket.MarkupContainer
 import java.io.File
 
 // FIXME: we want to be able to create both parameterized and unparameterized versions of the include and tag methods
-// FIXME: are the parameters being documented?
+// FIXME: add kdocs for type parameters
+// FIXME: onConfig is missing generic parameter for TextField
 
 class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Builder) {
 
     fun ConfigInfo.toConfigInterface() = builder.addType(
         TypeSpec.interfaceBuilder(toConfigInterfaceName()).apply {
-            addKdoc("${configInterfaceKdoc.invoke(this@toConfigInterface, generatorInfo)}\n\n")
+            addKdoc("${configInterfaceKdoc(generatorInfo)}\n\n")
             if (isConfigOnly) addTypeVariable(toComponentTypeVarName())
             if (modelInfo.type == TargetType.Unbounded) addTypeVariable(generatorInfo.toModelTypeVarName())
             props.forEach { addProp(propInfo = it, builder = this, superClassProp = false) }
@@ -32,7 +33,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
 
     fun ConfigInfo.toConfigClass() = builder.addType(
         TypeSpec.classBuilder(toConfigClassName()).apply {
-            addKdoc("${configClassKdoc.invoke(this@toConfigClass, generatorInfo)}\n\n")
+            addKdoc("${configClassKdoc(generatorInfo)}\n\n")
             if (isConfigOnly) {
                 addModifiers(KModifier.OPEN)
                 addTypeVariable(toComponentTypeVarName())
@@ -52,7 +53,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
 
     fun ConfigInfo.toTagClass() = builder.addType(
         TypeSpec.classBuilder(toTagClassName()).apply {
-            addKdoc("${tagClassKdoc.invoke(this@toTagClass, generatorInfo)}\n\n")
+            addKdoc("${tagClassKdoc(generatorInfo)}\n\n")
             if (modelInfo.type == TargetType.Unbounded) addTypeVariable(generatorInfo.toModelTypeVarName())
             addSuperinterface(HtmlBlockTag::class.asTypeName())
             addSuperinterface(
@@ -69,21 +70,25 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
         }.build()
     )
 
-    fun ConfigInfo.toTagMethod(parameterized: Boolean = true) = builder.addFunction(
+    // FIXME: does the model parameter have to be non-null for the parameterized version?
+    fun ConfigInfo.toTagMethod(isModelParameterNamed: Boolean = true) = builder.addFunction(
         FunSpec.builder(generatorInfo.tagMethod.toName(this)).apply {
-            addKdoc("${tagMethodKdoc.invoke(this@toTagMethod, generatorInfo)}\n\n")
-            if (modelInfo.type == TargetType.Unbounded) addTypeVariable(generatorInfo.toModelTypeVarName())
+            addKdoc("${tagMethodKdoc(generatorInfo)}\n\n")
+            if (modelInfo.type == TargetType.Unbounded && isModelParameterNamed)
+                addTypeVariable(generatorInfo.toModelTypeVarName()) // FIXME: pull this out and also add kdoc
             receiver(HTMLTag::class.asTypeName())
-            (allProps + listOf(
+            val props = allProps.filter { isModelParameterNamed || it.name != "model" }
+            (props + listOf(
                 idProp(isNullable = true),
                 toTagNamePropInfo(),
                 toInitialParamsPropInfo(),
-                toTagBlockPropInfo()
+                toTagBlockPropInfo(isModelParameterNamed = isModelParameterNamed)
             )).forEach {
                 addParam(
                     it,
                     kdoc = KdocOption.Method,
-                    configInfo = this@toTagMethod
+                    configInfo = this@toTagMethod,
+                    isModelParameterNamed = isModelParameterNamed
                 )
             }
             addCode(toTagMethodBody(propInfoList = allProps))
@@ -92,7 +97,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
 
     fun ConfigInfo.toIncludeMethod(parameterized: Boolean = true) = builder.addFunction(
         FunSpec.builder(generatorInfo.includeMethod.toName(this)).apply {
-            addKdoc("${includeMethodKdoc.invoke(this@toIncludeMethod, generatorInfo)}\n\n")
+            addKdoc("${includeMethodKdoc(generatorInfo)}\n\n")
             if (modelInfo.type == TargetType.Unbounded) addTypeVariable(generatorInfo.toModelTypeVarName())
             receiver(MarkupContainer::class)
             returns(targetWithGeneric())
@@ -160,13 +165,13 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
             propInfoList.joinToString(", ") { "${it.name} = ${it.name}" }, visitMethod, blockParmName
         )
 
-    private fun ConfigInfo.toTagBlockPropInfo() = PropInfo(
+    private fun ConfigInfo.toTagBlockPropInfo(isModelParameterNamed: Boolean) = PropInfo(
         name = "block",
         default = emptyLambda,
         type = {
             LambdaTypeName.get(
                 returnType = Unit::class.asTypeName(),
-                receiver = toTagClassName().parameterizedBy(toModelTypeVarName())
+                receiver = toTagClassName().parameterizedBy(if (isModelParameterNamed) toModelTypeVarName() else STAR)
             )
         },
         desc = { "Tag configuration block" },
@@ -244,9 +249,11 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
         }
     }
 
-    private fun FunSpec.Builder.addParam(propInfo: PropInfo, kdoc: KdocOption, configInfo: ConfigInfo) =
+    private fun FunSpec.Builder.addParam(propInfo: PropInfo, kdoc: KdocOption, configInfo: ConfigInfo, isModelParameterNamed: Boolean = true) =
         addParameter(
-            ParameterSpec.builder(propInfo.name, propInfo.type(configInfo, generatorInfo.toModelTypeVarName())).also {
+            ParameterSpec.builder(propInfo.name,
+                propInfo.type(configInfo, if (isModelParameterNamed) generatorInfo.toModelTypeVarName() else STAR)
+            ).also {
                 propInfo.default?.let { defaultValue -> it.defaultValue(defaultValue) }
                 if (kdoc.add) it.addKdoc("${propInfo.desc.invoke(propInfo)}${kdoc.eol}")
             }.build()

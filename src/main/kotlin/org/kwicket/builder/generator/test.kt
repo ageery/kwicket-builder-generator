@@ -85,8 +85,9 @@ fun main() {
                 type = {
                     LambdaTypeName.get(
                         returnType = Unit::class.asTypeName(),
-                        // FIXME: need to get this "C" out somehow...
+                        // FIXME: need to get this "C" out somehow... -- this should come from the generator..
                         receiver = if (isConfigOnly) TypeVariableName("C") else componentInfo.target.asClassName()
+                            .parameterizedBy(if (componentInfo.isTargetParameterizedByModel) it else null)
                     ).copy(nullable = this.modelInfo.nullable)
                 },
                 desc = { "optional lambda to execute in the onConfigure lifecycle method" }
@@ -192,6 +193,7 @@ fun main() {
             it.toConfigClass()
             it.toTagClass()
             it.toTagMethod(true)
+            it.toTagMethod(false)
             it.toIncludeMethod(true)
         }
     }.write(System.out)
