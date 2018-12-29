@@ -85,7 +85,7 @@ fun main() {
                 type = {
                     LambdaTypeName.get(
                         returnType = Unit::class.asTypeName(),
-                        receiver = if (isConfigOnly) TypeVariableName(it.generatorInfo.componentParameterName) else componentInfo.target.asClassName()
+                        receiver = if (isConfigOnly) TypeVariableName(it.generatorInfo.componentParam.name) else componentInfo.target.asClassName()
                             .parameterizedBy(if (componentInfo.isTargetParameterizedByModel) it.modelTypeName else null)
                     ).copy(nullable = this.modelInfo.nullable)
                 },
@@ -194,6 +194,7 @@ fun main() {
             it.toTagMethod(true)
             it.toTagMethod(false)
             it.toIncludeMethod(true)
+            it.toIncludeMethod(false)
         }
     }.write(System.out)
 

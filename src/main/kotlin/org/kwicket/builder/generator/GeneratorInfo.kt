@@ -12,8 +12,10 @@ import com.squareup.kotlinpoet.TypeVariableName
  * @property includeMethod how to derive the include package and method name from a [ConfigInfo] object
  * @property tagClass how to derive the tag class package and class name from a [ConfigInfo] object
  * @property tagMethod how to derive the tag package and method name from a [ConfigInfo] object
- * @property componentParameterName parameter name to use for components
- * @property modelParameterName parameter name to use for models
+ * @property componentParam parameter info for the component parameter
+ * @property modelParam parameter info for the model parameter
+// * @property componentParameterName parameter name to use for components
+// * @property modelParameterName parameter name to use for models
  */
 class GeneratorInfo(
     val configInterface: ClassInfo,
@@ -22,8 +24,12 @@ class GeneratorInfo(
     val includeMethod: ClassInfo,
     val tagClass: ClassInfo,
     val tagMethod: ClassInfo,
-    val componentParameterName: String = "C",
-    val modelParameterName: String = "T"
+//    val componentParameterName: String = "C",
+//    val modelParameterName: String = "T",
+//    val componentParameterKdoc: String = "type of the Wicket component",
+//    val modelParameterKdoc: String = "type of the component model",
+    val componentParam: ParamInfo = ParamInfo(name = "C", kdoc = "type of the Wicket component"),
+    val modelParam: ParamInfo = ParamInfo(name = "T", kdoc = "type of the component model")
 )
 
 /**
@@ -32,7 +38,7 @@ class GeneratorInfo(
  * @receiver [GeneratorInfo] to use for determining the model parameter name
  * @return a [TypeVariableName] for the model
  */
-fun GeneratorInfo.toModelTypeVarName() = TypeVariableName(modelParameterName)
+fun GeneratorInfo.toModelTypeVarName() = TypeVariableName(modelParam.name)
 
 /**
  * Returns a [TypeVariableName] for the component.
@@ -40,7 +46,7 @@ fun GeneratorInfo.toModelTypeVarName() = TypeVariableName(modelParameterName)
  * @receiver [GeneratorInfo] to use for determining the component parameter name
  * @return a [TypeVariableName] for the component
  */
-fun GeneratorInfo.toComponentTypeVarName() = TypeVariableName(componentParameterName)
+fun GeneratorInfo.toComponentTypeVarName() = TypeVariableName(componentParam.name)
 
 /**
  * Specifies how to derive a package and class from a [ConfigInfo] object.
@@ -49,3 +55,13 @@ fun GeneratorInfo.toComponentTypeVarName() = TypeVariableName(componentParameter
  * @property toName lambda for generating a class name from a [ConfigInfo] object
  */
 class ClassInfo(val toPackage: ConfigInfo.() -> String, val toName: ConfigInfo.() -> String)
+
+/**
+ * Specifies the name and kdoc for a type of parameter.
+ *
+ * @property name name of the parameter
+ * @property kdoc KDoc for the parameter
+ */
+class ParamInfo(val name: String, val kdoc: String)
+
+fun ParamInfo.toKdocValue() = "@param $name $kdoc\n"
