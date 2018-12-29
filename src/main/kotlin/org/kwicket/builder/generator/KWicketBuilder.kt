@@ -290,7 +290,9 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
             type = type(
                 configInfo, TypeContext(
                     modelTypeName = generatorInfo.toModelTypeVarName(),
-                    type = generatorType, isModelParameterNamed = false, generatorInfo = generatorInfo
+                    type = generatorType,
+                    isModelParameterNamed = false,
+                    generatorInfo = generatorInfo
                 )
             ),
             modifiers = *listOfNotNull(if (superClassProp) KModifier.OVERRIDE else null).toTypedArray()

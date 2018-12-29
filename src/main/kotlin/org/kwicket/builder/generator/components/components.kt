@@ -11,6 +11,7 @@ import org.apache.wicket.markup.html.WebMarkupContainer
 import org.apache.wicket.markup.html.basic.Label
 import org.apache.wicket.markup.html.basic.MultiLineLabel
 import org.apache.wicket.markup.html.form.Button
+import org.apache.wicket.markup.html.form.CheckBox
 import org.apache.wicket.markup.html.form.FormComponent
 import org.apache.wicket.markup.html.form.TextField
 import org.apache.wicket.model.IModel
@@ -23,8 +24,12 @@ val componentConfig = ConfigInfo(
         PropInfo(
             name = "model",
             type = {
-                IModel::class.asTypeName().parameterizedBy(it.modelTypeName)
-                    .copy(nullable = this.modelInfo.nullable && (!it.type.isMethod))
+                IModel::class.asTypeName()
+                    .parameterizedBy(
+                        if (modelInfo.type == TargetType.Exact)
+                            modelInfo.target.asTypeName()
+                        else it.modelTypeName
+                    ).copy(nullable = this.modelInfo.nullable && (!it.type.isMethod))
             },
             desc = { "model for the component" }
         ),
@@ -188,7 +193,12 @@ val ajaxLinkConfig = ConfigInfo(
     )
 )
 
-//var onClick: (AjaxLink<T>.(AjaxRequestTarget) -> Unit)?
+val checkBoxConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = CheckBox::class),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = Boolean::class, nullable = false),
+    parent = formComponentConfig,
+    tagInfo = TagInfo(tagName = "input", attrs = mapOf("type" to "checkbox"))
+)
 
 val generatorInfo = GeneratorInfo(
     configInterface = ClassInfo(toPackage = { "org.kwicket.builder.config" }, toName = { "I${basename}Config" }),
@@ -209,5 +219,6 @@ val allComponents = listOf(
     buttonConfig,
     formComponentConfig,
     textFieldConfig,
-    ajaxLinkConfig
+    ajaxLinkConfig,
+    checkBoxConfig
 )
