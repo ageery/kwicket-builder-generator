@@ -3,7 +3,9 @@ package org.kwicket.builder.generator.components
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import org.apache.wicket.Component
+import org.apache.wicket.Page
 import org.apache.wicket.ajax.AjaxRequestTarget
+import org.apache.wicket.ajax.markup.html.AjaxFallbackLink
 import org.apache.wicket.ajax.markup.html.AjaxLink
 import org.apache.wicket.behavior.Behavior
 import org.apache.wicket.devutils.debugbar.DebugBar
@@ -14,8 +16,13 @@ import org.apache.wicket.markup.html.form.Button
 import org.apache.wicket.markup.html.form.CheckBox
 import org.apache.wicket.markup.html.form.FormComponent
 import org.apache.wicket.markup.html.form.TextField
+import org.apache.wicket.markup.html.link.BookmarkablePageLink
+import org.apache.wicket.markup.html.link.Link
+import org.apache.wicket.markup.html.link.PopupSettings
 import org.apache.wicket.model.IModel
+import org.apache.wicket.request.mapper.parameter.PageParameters
 import org.kwicket.builder.generator.*
+import kotlin.reflect.KClass
 
 val componentConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = Component::class),
@@ -173,9 +180,30 @@ val buttonConfig = ConfigInfo(
     modelInfo = ModelInfo(type = TargetType.Exact, target = String::class)
 )
 
+val checkBoxConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = CheckBox::class),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = Boolean::class, nullable = false),
+    parent = formComponentConfig,
+    tagInfo = TagInfo(tagName = "input", attrs = mapOf("type" to "checkbox"))
+)
+
+val abstractLinkConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = Link::class, isTargetParameterizedByModel = true),
+    parent = componentConfig,
+    isConfigOnly = true,
+    props = listOf(
+        PropInfo(
+            name = "popupSettings",
+            type = { PopupSettings::class.asTypeName() },
+            desc = { "specifies how the link opens" }
+        )
+    ),
+    tagInfo = TagInfo(tagName = "a")
+)
+
 val ajaxLinkConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = AjaxLink::class),
-    parent = componentConfig,
+    parent = abstractLinkConfig,
     isConfigOnly = false,
     props = listOf(
         PropInfo(
@@ -193,11 +221,41 @@ val ajaxLinkConfig = ConfigInfo(
     )
 )
 
-val checkBoxConfig = ConfigInfo(
-    componentInfo = ComponentInfo(target = CheckBox::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = Boolean::class, nullable = false),
-    parent = formComponentConfig,
-    tagInfo = TagInfo(tagName = "input", attrs = mapOf("type" to "checkbox"))
+val bookmarkablePageLinkConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = BookmarkablePageLink::class),
+    parent = abstractLinkConfig,
+    props = listOf(
+        PropInfo(
+            name = "pageClass",
+            desc = { "class of the page the link references" },
+            type = { KClass::class.asTypeName().parameterizedBy(WildcardTypeName.producerOf(Page::class.asTypeName())) }
+        ),
+        PropInfo(
+            name = "pageParams",
+            type = { PageParameters::class.asTypeName() },
+            desc = { "parameters to pass to the link" }
+        )
+    )
+)
+
+val ajaxFallbackLinkConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = AjaxFallbackLink::class),
+    parent = abstractLinkConfig,
+    isConfigOnly = false,
+    props = listOf(
+        PropInfo(
+            name = "onClick",
+            type = {
+                LambdaTypeName.get(
+                    receiver = AjaxLink::class.asTypeName()
+                        .parameterizedBy(if (it.isModelParameterNamed) generatorInfo.toModelTypeVarName() else STAR),
+                    parameters = * arrayOf(AjaxRequestTarget::class.asTypeName().copy(nullable = true)),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "click handler lambda" }
+        )
+    )
 )
 
 val generatorInfo = GeneratorInfo(
@@ -220,5 +278,8 @@ val allComponents = listOf(
     formComponentConfig,
     textFieldConfig,
     ajaxLinkConfig,
-    checkBoxConfig
+    checkBoxConfig,
+    abstractLinkConfig,
+    bookmarkablePageLinkConfig,
+    ajaxFallbackLinkConfig
 )

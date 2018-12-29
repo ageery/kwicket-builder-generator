@@ -31,7 +31,8 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
                         propInfo = it,
                         builder = this,
                         superClassProp = false,
-                        generatorType = GeneratorType.ConfigInterface
+                        generatorType = GeneratorType.ConfigInterface,
+                        isModelParameterNamed = true
                     )
                 }
                 parent?.let {
@@ -72,7 +73,8 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
                         propInfo = it,
                         builder = this,
                         superClassProp = true,
-                        generatorType = GeneratorType.ConfigClass
+                        generatorType = GeneratorType.ConfigClass,
+                        isModelParameterNamed = true
                     )
                 }
                 addConfigClassSuperClass(this)
@@ -284,36 +286,62 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
             }
     }.build()
 
-    private fun PropInfo.toPropertySpec(configInfo: ConfigInfo, superClassProp: Boolean, generatorType: GeneratorType) =
-        PropertySpec.builder(
-            name = name,
-            type = type(
-                configInfo, TypeContext(
-                    modelTypeName = generatorInfo.toModelTypeVarName(),
-                    type = generatorType,
-                    isModelParameterNamed = false,
-                    generatorInfo = generatorInfo
-                )
-            ),
-            modifiers = *listOfNotNull(if (superClassProp) KModifier.OVERRIDE else null).toTypedArray()
-        )
-            .mutable(mutable)
-            .apply { if (superClassProp) initializer(name) }
-            .build()
+//    private fun PropInfo.toPropertySpec(
+//        configInfo: ConfigInfo,
+//        superClassProp: Boolean,
+//        generatorType: GeneratorType,
+//        isModelParameterNamed: Boolean) =
+//        PropertySpec.builder(
+//            name = name,
+//            type = type(
+//                configInfo, TypeContext(
+//                    modelTypeName = generatorInfo.toModelTypeVarName(),
+//                    type = generatorType,
+//                    isModelParameterNamed = isModelParameterNamed,
+//                    generatorInfo = generatorInfo
+//                )
+//            ),
+//            modifiers = *listOfNotNull(if (superClassProp) KModifier.OVERRIDE else null).toTypedArray()
+//        )
+//            .mutable(mutable)
+//            .apply { if (superClassProp) initializer(name) }
+//            .build()
 
     private fun ConfigInfo.addProp(
         propInfo: PropInfo,
         builder: TypeSpec.Builder,
         superClassProp: Boolean,
-        generatorType: GeneratorType
-    ) =
-        builder.addProperty(
-            propInfo.toPropertySpec(
-                this, superClassProp = superClassProp,
-                generatorType = generatorType
-            )
+        generatorType: GeneratorType,
+        isModelParameterNamed: Boolean
+    ) = builder.addProperty(
+        PropertySpec.builder(
+            name = propInfo.name,
+            type = propInfo.type(
+                this,
+                TypeContext(
+                    modelTypeName = generatorInfo.toModelTypeVarName(),
+                    type = generatorType,
+                    isModelParameterNamed = isModelParameterNamed,
+                    generatorInfo = generatorInfo
+                )
+            ),
+            modifiers = *listOfNotNull(if (superClassProp) KModifier.OVERRIDE else null).toTypedArray()
         )
-            .addKdoc("@property ${propInfo.name} ${propInfo.desc.invoke(propInfo)}\n")
+            .mutable(propInfo.mutable)
+            .apply { if (superClassProp) initializer(propInfo.name) }
+            .build()
+    )
+        .addKdoc("@property ${propInfo.name} ${propInfo.desc.invoke(propInfo)}\n")
+
+    // FIXME: combine with the method above
+//    private fun ConfigInfo.addProp(
+//        propInfo: PropInfo,
+//        builder: TypeSpec.Builder,
+//        superClassProp: Boolean,
+//        generatorType: GeneratorType,
+//        isModelParameterNamed: Boolean
+//    ) = builder.addProperty(propInfo.toPropertySpec(this, superClassProp, generatorType, isModelParameterNamed))
+//        .addKdoc("@property ${propInfo.name} ${propInfo.desc.invoke(propInfo)}\n")
 
     private fun ConfigInfo.toSuperInterfaceComponentParameter() =
         if (isConfigOnly) generatorInfo.toComponentTypeVarName()
@@ -331,14 +359,14 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
         Model
     }
 
-    private fun TypeSpec.Builder.addTypeVar(type: ParamType) = when(type) {
+    private fun TypeSpec.Builder.addTypeVar(type: ParamType) = when (type) {
         ParamType.Component -> addTypeVariable(generatorInfo.toComponentTypeVarName())
             .addKdoc(generatorInfo.componentParam.toKdocValue())
         ParamType.Model -> addTypeVariable(generatorInfo.toModelTypeVarName())
             .addKdoc(generatorInfo.modelParam.toKdocValue())
     }
 
-    private fun FunSpec.Builder.addTypeVar(type: ParamType) = when(type) {
+    private fun FunSpec.Builder.addTypeVar(type: ParamType) = when (type) {
         ParamType.Component -> addTypeVariable(generatorInfo.toComponentTypeVarName())
             .addKdoc(generatorInfo.componentParam.toKdocValue())
         ParamType.Model -> addTypeVariable(generatorInfo.toModelTypeVarName())
