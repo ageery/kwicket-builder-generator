@@ -7,8 +7,6 @@ import kotlinx.html.HtmlBlockTag
 import org.apache.wicket.MarkupContainer
 import java.io.File
 
-// FIXME: add kdocs for type parameters
-
 /**
  * Code generator for Wicket component functionality.
  *
@@ -177,7 +175,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
                     )
                 }
                 addParam(
-                    blockPropInfo, // FIXME: this is wrong -- it shouldn't be parameterized
+                    blockPropInfo,
                     kdoc = KdocOption.Method,
                     configInfo = this@toIncludeMethod,
                     generatorType = GeneratorType.IncludeMethod,

@@ -48,7 +48,7 @@ internal val tagNamePropInfo = PropInfo(
     desc = { "Name of the HTML tag" }
 )
 
-internal val initialAttrsPropInfo  = PropInfo(
+internal val initialAttrsPropInfo = PropInfo(
     name = "initialAttributes", type = { stringMapTypeName },
     default = { defaultTagAttrs.toLiteralMapCodeBlock() },
     mutable = false,
@@ -58,10 +58,7 @@ internal val initialAttrsPropInfo  = PropInfo(
 internal val configPropInfo = PropInfo(
     name = "config",
     default = null,
-    type = {
-        // FIXME: pull this out
-        toClassName(it.generatorInfo.configInterface).parameterizedBy(it.generatorInfo.toModelTypeVarName())
-    }
+    type = { toClassName(it.generatorInfo.configInterface).parameterizedBy(it.generatorInfo.toModelTypeVarName()) }
 )
 
 internal val factoryPropInfo = PropInfo(
