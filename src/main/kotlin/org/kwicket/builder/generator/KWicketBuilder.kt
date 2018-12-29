@@ -66,7 +66,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
                 addSuperinterface(
                     toConfigInterfaceName().parameterizedBy(
                         if (isConfigOnly) toSuperInterfaceComponentParameter() else null,
-                        toModelTypeVarName()
+                        toModelTypeVarName(isModelParameterNamed = true)
                     )
                 )
                 props.forEach {
@@ -94,7 +94,8 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
                 if (modelInfo.type == TargetType.Unbounded) addTypeVar(ParamType.Model)
                 addSuperinterface(HtmlBlockTag::class.asTypeName())
                 addSuperinterface(
-                    superinterface = toConfigInterfaceName().parameterizedBy(toModelTypeVarName()),
+                    superinterface = toConfigInterfaceName()
+                        .parameterizedBy(toModelTypeVarName(isModelParameterNamed = true)),
                     delegate = CodeBlock.of(tagBuilderParamName)
                 )
                 superclass(toTagSuperClass())
@@ -111,7 +112,6 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
         )
     }
 
-    // FIXME: does the model parameter have to be non-null for the parameterized version?
     /**
      * Generates an HTML tag method.
      *
@@ -154,32 +154,34 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
      *
      * @receiver the [ConfigInfo] to convert into an include method
      */
-    fun ConfigInfo.toIncludeMethod(parameterized: Boolean = true) {
+    fun ConfigInfo.toIncludeMethod(isModelParameterNamed: Boolean = true) {
         builder.addFunction(
             FunSpec.builder(generatorInfo.includeMethod.toName(this)).apply {
                 addKdoc("${includeMethodKdoc(generatorInfo)}\n\n")
-                if (modelInfo.type == TargetType.Unbounded) addTypeVar(ParamType.Model)
+                if (modelInfo.type == TargetType.Unbounded && isModelParameterNamed) addTypeVar(ParamType.Model)
                 receiver(MarkupContainer::class)
-                returns(targetWithGeneric())
+                returns(targetWithGeneric(isModelParameterNamed))
                 addParam(
                     idPropInfo(),
                     kdoc = KdocOption.Method,
                     configInfo = this@toIncludeMethod,
                     generatorType = GeneratorType.IncludeMethod
                 )
-                allProps.forEach {
+                allProps.filter { isModelParameterNamed || it.name != "model" }.forEach {
                     addParam(
                         it,
                         kdoc = KdocOption.Method,
                         configInfo = this@toIncludeMethod,
-                        generatorType = GeneratorType.IncludeMethod
+                        generatorType = GeneratorType.IncludeMethod,
+                        isModelParameterNamed = isModelParameterNamed
                     )
                 }
                 addParam(
-                    blockPropInfo,
+                    blockPropInfo, // FIXME: this is wrong -- it shouldn't be parameterized
                     kdoc = KdocOption.Method,
                     configInfo = this@toIncludeMethod,
-                    generatorType = GeneratorType.IncludeMethod
+                    generatorType = GeneratorType.IncludeMethod,
+                    isModelParameterNamed = isModelParameterNamed
                 )
                 addCode(
                     CodeBlock.of(
@@ -209,11 +211,13 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
      */
     fun write(out: Appendable) = builder.build().writeTo(out)
 
-    private fun ConfigInfo.toModelTypeVarName() =
-        if (modelInfo.type == TargetType.Unbounded) generatorInfo.toModelTypeVarName() else null
+    private fun ConfigInfo.toModelTypeVarName(isModelParameterNamed: Boolean) =
+        if (modelInfo.type == TargetType.Unbounded)
+            if (isModelParameterNamed) generatorInfo.toModelTypeVarName() else STAR
+        else null
 
-    private fun ConfigInfo.targetWithGeneric() =
-        componentInfo.target.asTypeName().parameterizedBy(toModelTypeVarName())
+    private fun ConfigInfo.targetWithGeneric(isModelParameterNamed: Boolean) =
+        componentInfo.target.asTypeName().parameterizedBy(toModelTypeVarName(isModelParameterNamed))
 
     private fun ConfigInfo.toConfigInterfaceName() = toClassName(generatorInfo.configInterface)
     private fun ConfigInfo.toConfigClassName() = toClassName(generatorInfo.configClass)

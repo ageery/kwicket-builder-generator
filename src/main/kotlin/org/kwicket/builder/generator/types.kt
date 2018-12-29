@@ -33,7 +33,8 @@ internal val blockPropInfo = PropInfo(
     default = { CodeBlock.of(nullDefault) },
     type = {
         LambdaTypeName.get(
-            receiver = toClassName(it.generatorInfo.configInterface).parameterizedBy(it.generatorInfo.toModelTypeVarName()),
+            receiver = toClassName(it.generatorInfo.configInterface)
+                .parameterizedBy(if (it.isModelParameterNamed) it.generatorInfo.toModelTypeVarName() else STAR),
             returnType = Unit::class.asTypeName()
         ).copy(nullable = true)
     }

@@ -31,6 +31,9 @@ enum class GeneratorType {
     TagMethod
 }
 
+val GeneratorType.isMethod: Boolean
+    get() = this == GeneratorType.IncludeMethod || this == GeneratorType.TagMethod
+
 /**
  * Context info about the type being generated.
  *
