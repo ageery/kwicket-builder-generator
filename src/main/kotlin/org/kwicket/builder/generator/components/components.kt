@@ -7,6 +7,7 @@ import org.apache.wicket.Page
 import org.apache.wicket.ajax.AjaxRequestTarget
 import org.apache.wicket.ajax.markup.html.AjaxFallbackLink
 import org.apache.wicket.ajax.markup.html.AjaxLink
+import org.apache.wicket.ajax.markup.html.form.AjaxFallbackButton
 import org.apache.wicket.behavior.Behavior
 import org.apache.wicket.devutils.debugbar.DebugBar
 import org.apache.wicket.markup.html.WebMarkupContainer
@@ -174,10 +175,63 @@ val abstractButtonConfig = ConfigInfo(
     )
 )
 
+val ajaxFallbackButtonConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = AjaxFallbackButton::class),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = String::class), // FIXME: should we be able to pick this up from the parent?
+    parent = abstractButtonConfig,
+    isConfigOnly = false,
+    props = listOf(
+        PropInfo(
+            name = "onSubmit",
+            type = {
+                LambdaTypeName.get(
+                    receiver = AjaxFallbackButton::class.asTypeName(),
+                    parameters = * arrayOf(AjaxRequestTarget::class.asTypeName().copy(nullable = true)),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "submit handler lambda" }
+        ),
+        PropInfo(
+            name = "onError",
+            type = {
+                LambdaTypeName.get(
+                    receiver = AjaxFallbackButton::class.asTypeName(),
+                    parameters = * arrayOf(AjaxRequestTarget::class.asTypeName().copy(nullable = true)),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "error handler lambda" }
+        )
+    )
+)
+
 val buttonConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = Button::class),
     parent = abstractButtonConfig,
-    modelInfo = ModelInfo(type = TargetType.Exact, target = String::class)
+    modelInfo = ModelInfo(type = TargetType.Exact, target = String::class),
+    props = listOf(
+        PropInfo(
+            name = "onSubmit",
+            type = {
+                LambdaTypeName.get(
+                    receiver = Button::class.asTypeName(),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "submit handler lambda" }
+        ),
+        PropInfo(
+            name = "onError",
+            type = {
+                LambdaTypeName.get(
+                    receiver = Button::class.asTypeName(),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "error handler lambda" }
+        )
+    )
 )
 
 val checkBoxConfig = ConfigInfo(
@@ -275,6 +329,7 @@ val allComponents = listOf(
     webMarkupContainerConfig,
     abstractButtonConfig,
     buttonConfig,
+    ajaxFallbackButtonConfig,
     formComponentConfig,
     textFieldConfig,
     ajaxLinkConfig,
