@@ -8,15 +8,13 @@ import org.apache.wicket.ajax.AjaxRequestTarget
 import org.apache.wicket.ajax.markup.html.AjaxFallbackLink
 import org.apache.wicket.ajax.markup.html.AjaxLink
 import org.apache.wicket.ajax.markup.html.form.AjaxFallbackButton
+import org.apache.wicket.ajax.markup.html.form.AjaxSubmitLink
 import org.apache.wicket.behavior.Behavior
 import org.apache.wicket.devutils.debugbar.DebugBar
 import org.apache.wicket.markup.html.WebMarkupContainer
 import org.apache.wicket.markup.html.basic.Label
 import org.apache.wicket.markup.html.basic.MultiLineLabel
-import org.apache.wicket.markup.html.form.Button
-import org.apache.wicket.markup.html.form.CheckBox
-import org.apache.wicket.markup.html.form.FormComponent
-import org.apache.wicket.markup.html.form.TextField
+import org.apache.wicket.markup.html.form.*
 import org.apache.wicket.markup.html.link.BookmarkablePageLink
 import org.apache.wicket.markup.html.link.Link
 import org.apache.wicket.markup.html.link.PopupSettings
@@ -24,6 +22,15 @@ import org.apache.wicket.model.IModel
 import org.apache.wicket.request.mapper.parameter.PageParameters
 import org.kwicket.builder.generator.*
 import kotlin.reflect.KClass
+
+val generatorInfo = GeneratorInfo(
+    configInterface = ClassInfo(toPackage = { "org.kwicket.builder.config" }, toName = { "I${basename}Config" }),
+    configClass = ClassInfo(toPackage = { "org.kwicket.builder.config" }, toName = { "${basename}Config" }),
+    factoryMethod = ClassInfo(toPackage = { "org.kwicket.builder.factory" }, toName = { "invoke" }),
+    includeMethod = ClassInfo(toPackage = { "org.kwicket.builder.queued" }, toName = { basename.decapitalize() }),
+    tagClass = ClassInfo(toPackage = { "org.kwicket.builder.dsl.tag" }, toName = { "${basename}Tag" }),
+    tagMethod = ClassInfo(toPackage = { "org.kwicket.builder.dsl.tag" }, toName = { basename.decapitalize() })
+)
 
 val componentConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = Component::class),
@@ -177,7 +184,10 @@ val abstractButtonConfig = ConfigInfo(
 
 val ajaxFallbackButtonConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = AjaxFallbackButton::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = String::class), // FIXME: should we be able to pick this up from the parent?
+    modelInfo = ModelInfo(
+        type = TargetType.Exact,
+        target = String::class
+    ), // FIXME: should we be able to pick this up from the parent?
     parent = abstractButtonConfig,
     isConfigOnly = false,
     props = listOf(
@@ -312,13 +322,51 @@ val ajaxFallbackLinkConfig = ConfigInfo(
     )
 )
 
-val generatorInfo = GeneratorInfo(
-    configInterface = ClassInfo(toPackage = { "org.kwicket.builder.config" }, toName = { "I${basename}Config" }),
-    configClass = ClassInfo(toPackage = { "org.kwicket.builder.config" }, toName = { "${basename}Config" }),
-    factoryMethod = ClassInfo(toPackage = { "org.kwicket.builder.factory" }, toName = { "invoke" }),
-    includeMethod = ClassInfo(toPackage = { "org.kwicket.builder.queued" }, toName = { basename.decapitalize() }),
-    tagClass = ClassInfo(toPackage = { "org.kwicket.builder.dsl.tag" }, toName = { "${basename}Tag" }),
-    tagMethod = ClassInfo(toPackage = { "org.kwicket.builder.dsl.tag" }, toName = { basename.decapitalize() })
+val ajaxSubmitLinkConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = AjaxSubmitLink::class),
+    parent = abstractLinkConfig,
+    isConfigOnly = false,
+    props = listOf(
+        PropInfo(
+            name = "onSubmit",
+            type = {
+                LambdaTypeName.get(
+                    receiver = AjaxSubmitLink::class.asTypeName(),
+                    parameters = * arrayOf(AjaxRequestTarget::class.asTypeName()),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "submit handler lambda" }
+        ),
+        PropInfo(
+            name = "onError",
+            type = {
+                LambdaTypeName.get(
+                    receiver = AjaxSubmitLink::class.asTypeName(),
+                    parameters = * arrayOf(AjaxRequestTarget::class.asTypeName()),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "error handler lambda" }
+        ),
+        PropInfo(
+            name = "form",
+            type = { Form::class.asTypeName().parameterizedBy(STAR).copy(nullable = true) },
+            desc = { "form the link submits" }
+        )
+    )
+)
+
+val checkConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = Check::class),
+    parent = componentConfig,
+    props = listOf(
+        PropInfo(
+            name = "group",
+            type = { CheckGroup::class.modelParam(it) },
+            desc = { "check group the check is associated with" }
+        )
+    )
 )
 
 val allComponents = listOf(
@@ -336,5 +384,7 @@ val allComponents = listOf(
     checkBoxConfig,
     abstractLinkConfig,
     bookmarkablePageLinkConfig,
-    ajaxFallbackLinkConfig
+    ajaxFallbackLinkConfig,
+    ajaxSubmitLinkConfig,
+    checkConfig
 )
