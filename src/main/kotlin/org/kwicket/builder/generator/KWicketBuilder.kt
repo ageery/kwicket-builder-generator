@@ -24,8 +24,8 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
         builder.addType(
             TypeSpec.interfaceBuilder(toConfigInterfaceName()).apply {
                 addKdoc("${configInterfaceKdoc(generatorInfo)}\n\n")
-                if (isConfigOnly) addTypeVar(ParamType.Component)
-                if (modelInfo.type == TargetType.Unbounded) addTypeVar(ParamType.Model)
+                if (isConfigOnly) addTypeVar(this, ParamType.Component)
+                if (modelInfo.isUseTypeVar) addTypeVar(this, ParamType.Model)
                 props.forEach {
                     addProp(
                         propInfo = it,
@@ -58,14 +58,14 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
                 addKdoc("${configClassKdoc(generatorInfo)}\n\n")
                 if (isConfigOnly) {
                     addModifiers(KModifier.OPEN)
-                    addTypeVar(ParamType.Component)
+                    addTypeVar(this, ParamType.Component)
                 }
-                if (modelInfo.type == TargetType.Unbounded) addTypeVar(ParamType.Model)
+                if (modelInfo.isUseTypeVar) addTypeVar(this, ParamType.Model)
                 primaryConstructor(toConfigClassConstructor())
                 addSuperinterface(
                     toConfigInterfaceName().parameterizedBy(
                         if (isConfigOnly) toSuperInterfaceComponentParameter() else null,
-                        toModelTypeVarName(isModelParameterNamed = true)
+                        toClassModelTypeVarName(isModelParameterNamed = true)
                     )
                 )
                 props.forEach {
@@ -74,7 +74,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
                         builder = this,
                         superClassProp = true,
                         generatorType = GeneratorType.ConfigClass,
-                        isModelParameterNamed = true
+                        isModelParameterNamed = !modelInfo.isExactlyOneType
                     )
                 }
                 addConfigClassSuperClass(this)
@@ -91,11 +91,11 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
         builder.addType(
             TypeSpec.classBuilder(toTagClassName()).apply {
                 addKdoc("${tagClassKdoc(generatorInfo)}\n\n")
-                if (modelInfo.type == TargetType.Unbounded) addTypeVar(ParamType.Model)
+                if (modelInfo.isUseTypeVar) addTypeVar(this, ParamType.Model)
                 addSuperinterface(HtmlBlockTag::class.asTypeName())
                 addSuperinterface(
                     superinterface = toConfigInterfaceName()
-                        .parameterizedBy(toModelTypeVarName(isModelParameterNamed = true)),
+                        .parameterizedBy(toClassModelTypeVarName(isModelParameterNamed = true)),
                     delegate = CodeBlock.of(tagBuilderParamName)
                 )
                 superclass(toTagSuperClass())
@@ -121,14 +121,14 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
         builder.addFunction(
             FunSpec.builder(generatorInfo.tagMethod.toName(this)).apply {
                 addKdoc("${tagMethodKdoc(generatorInfo)}\n\n")
-                if (modelInfo.type == TargetType.Unbounded && isModelParameterNamed) addTypeVar(ParamType.Model)
+                if (modelInfo.isUseTypeVar && isModelParameterNamed) addTypeVar(this, ParamType.Model)
                 receiver(HTMLTag::class.asTypeName())
                 val props = allProps.filter { isModelParameterNamed || it.name != "model" }
                 (props + listOf(
                     idPropInfo(isNullable = true),
                     tagNamePropInfo,
                     initialAttrsPropInfo,
-                    blockPropInfo
+                    tagBlockPropInfo
                 )).forEach {
                     addParam(
                         it,
@@ -158,7 +158,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
         builder.addFunction(
             FunSpec.builder(generatorInfo.includeMethod.toName(this)).apply {
                 addKdoc("${includeMethodKdoc(generatorInfo)}\n\n")
-                if (modelInfo.type == TargetType.Unbounded && isModelParameterNamed) addTypeVar(ParamType.Model)
+                if (modelInfo.isUseTypeVar && isModelParameterNamed) addTypeVar(this, ParamType.Model)
                 receiver(MarkupContainer::class)
                 returns(targetWithGeneric(isModelParameterNamed))
                 addParam(
@@ -167,7 +167,8 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
                     configInfo = this@toIncludeMethod,
                     generatorType = GeneratorType.IncludeMethod
                 )
-                allProps.filter { isModelParameterNamed || it.name != "model" }.forEach {
+                val props = allProps.filter { isModelParameterNamed || it.name != "model" }
+                props.forEach {
                     addParam(
                         it,
                         kdoc = KdocOption.Method,
@@ -176,8 +177,9 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
                         isModelParameterNamed = isModelParameterNamed
                     )
                 }
+                // FIXME:
                 addParam(
-                    blockPropInfo,
+                    includeBlockPropInfo,
                     kdoc = KdocOption.Method,
                     configInfo = this@toIncludeMethod,
                     generatorType = GeneratorType.IncludeMethod,
@@ -189,7 +191,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
                         qMethodTypeName,
                         toClassName(generatorInfo.factoryMethod),
                         CodeBlock.of(
-                            """%T(${allProps.joinToString(", ") { "${it.name} = ${it.name}" }})""", toConfigClassName()
+                            """%T(${props.joinToString(", ") { "${it.name} = ${it.name}" }})""", toInvokeConfigClassName(isModelParameterNamed) // toClassName(generatorInfo.configClass)
                         )
                     )
                 )
@@ -211,16 +213,26 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
      */
     fun write(out: Appendable) = builder.build().writeTo(out)
 
+    // FIXME: I would like to delete this method
     private fun ConfigInfo.toModelTypeVarName(isModelParameterNamed: Boolean) =
         if (modelInfo.type == TargetType.Unbounded)
             if (isModelParameterNamed) generatorInfo.toModelTypeVarName() else STAR
         else null
 
+    private fun ConfigInfo.toClassModelTypeVarName(isModelParameterNamed: Boolean) =
+        if (modelInfo.isUseTypeVar)
+            if (isModelParameterNamed) generatorInfo.toModelTypeVarName() else STAR
+        else null
+
     private fun ConfigInfo.targetWithGeneric(isModelParameterNamed: Boolean) =
-        componentInfo.target.asTypeName().parameterizedBy(toModelTypeVarName(isModelParameterNamed))
+        componentInfo.target.asTypeName().parameterizedBy(if (componentInfo.isTargetParameterizedByModel) toModelTypeVarName(isModelParameterNamed) else null)
 
     private fun ConfigInfo.toConfigInterfaceName() = toClassName(generatorInfo.configInterface)
     private fun ConfigInfo.toConfigClassName() = toClassName(generatorInfo.configClass)
+
+    private fun ConfigInfo.toInvokeConfigClassName(isModelParameterNamed: Boolean) = toClassName(generatorInfo.configClass)
+        .parameterizedBy(if (isModelParameterNamed || (parent?.componentInfo?.isTargetParameterizedByModel == true)) null else if (modelInfo.type == TargetType.Exact && modelInfo.nullable) modelInfo.target.asTypeName().nullable() else null)
+
     private fun ConfigInfo.toTagClassName() = toClassName(generatorInfo.tagClass)
 
     private fun ConfigInfo.toComponentTypeVarName() =
@@ -229,11 +241,15 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
                 .parameterizedBy(if (componentInfo.isTargetParameterizedByModel) generatorInfo.toModelTypeVarName() else null)
         )
 
+    private val ConfigInfo.configInterfaceTypeName: TypeName
+        get() = toConfigInterfaceName().parameterizedBy(if (modelInfo.isUseTypeVar) generatorInfo.toModelTypeVarName() else null)
+
     private fun ConfigInfo.toTagSuperClass() = configurableComponentTagTypeName
         .parameterizedBy(
             toSuperInterfaceModelParameter() ?: modelInfo.target.asClassName(),
             toSuperInterfaceComponentParameter(),
-            toConfigInterfaceName().parameterizedBy(toSuperInterfaceModelParameter())
+            //toConfigInterfaceName().parameterizedBy(toSuperInterfaceModelParameter())
+            configInterfaceTypeName
         )
 
     private fun ConfigInfo.addConfigClassSuperClass(builder: TypeSpec.Builder) {
@@ -244,7 +260,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
                     toSuperInterfaceModelParameter()
                 )
             ).apply {
-                allProps.forEach { addSuperclassConstructorParameter("${it.name} = ${it.name}") }
+                allParentProps.forEach { addSuperclassConstructorParameter("${it.name} = ${it.name}") }
             }
         }
     }
@@ -252,26 +268,26 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
     private fun FunSpec.Builder.addParam(
         propInfo: PropInfo, kdoc: KdocOption, configInfo: ConfigInfo,
         isModelParameterNamed: Boolean = true, generatorType: GeneratorType
-    ) =
-        addParameter(
-            ParameterSpec.builder(
-                propInfo.name, propInfo.type(
-                    configInfo, TypeContext(
-                        generatorInfo = generatorInfo,
-                        isModelParameterNamed = isModelParameterNamed,
-                        modelTypeName = if (isModelParameterNamed) generatorInfo.toModelTypeVarName() else STAR,
-                        type = generatorType
-                    )
-                )
-            ).also {
+    ): FunSpec.Builder {
+        val type = propInfo.type(
+            configInfo, TypeContext(
+                generatorInfo = generatorInfo,
+                isModelParameterNamed = isModelParameterNamed,
+                modelTypeName = if (isModelParameterNamed) generatorInfo.toModelTypeVarName() else STAR,
+                type = generatorType
+            )
+        )
+        return addParameter(
+            ParameterSpec.builder(propInfo.name, type).also {
                 propInfo.default?.let { defaultLambda ->
-                    defaultLambda.invoke(configInfo)?.let { defaultValue ->
+                    defaultLambda.invoke(configInfo, type)?.let { defaultValue ->
                         it.defaultValue(defaultValue)
                     }
                 }
                 if (kdoc.add) it.addKdoc("${propInfo.desc.invoke(propInfo)}${kdoc.eol}")
             }.build()
         )
+    }
 
     private fun ConfigInfo.toConfigClassConstructor() = FunSpec.constructorBuilder().apply {
         allParentProps.map { Triple(it, KdocOption.Constructor, this@toConfigClassConstructor) }
@@ -318,7 +334,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
             .parameterizedBy(if (componentInfo.isTargetParameterizedByModel) generatorInfo.toModelTypeVarName() else null)
 
     private fun ConfigInfo.toSuperInterfaceModelParameter() = when {
-        modelInfo.type == TargetType.Unbounded -> generatorInfo.toModelTypeVarName()
+        modelInfo.isUseTypeVar -> generatorInfo.toModelTypeVarName()
         parent?.modelInfo?.type == TargetType.Unbounded -> modelInfo.target.asClassName()
         else -> null
     }
@@ -328,18 +344,32 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
         Model
     }
 
-    private fun TypeSpec.Builder.addTypeVar(type: ParamType) = when (type) {
-        ParamType.Component -> addTypeVariable(generatorInfo.toComponentTypeVarName())
+    private fun ConfigInfo.addTypeVar(builder: TypeSpec.Builder, type: ParamType) = when (type) {
+        ParamType.Component -> builder.addTypeVariable(generatorInfo.toComponentTypeVarName())
             .addKdoc(generatorInfo.componentParam.toKdocValue())
-        ParamType.Model -> addTypeVariable(generatorInfo.toModelTypeVarName())
+        ParamType.Model -> builder.addTypeVariable(
+            generatorInfo.toModelTypeVarName()
+                .copy(bounds = listOf(modelInfo.target.asTypeName().copy(nullable = modelInfo.nullable)))
+        )
             .addKdoc(generatorInfo.modelParam.toKdocValue())
     }
 
-    private fun FunSpec.Builder.addTypeVar(type: ParamType) = when (type) {
-        ParamType.Component -> addTypeVariable(generatorInfo.toComponentTypeVarName())
+    private fun ConfigInfo.addTypeVar(builder: FunSpec.Builder, type: ParamType) = when (type) {
+        ParamType.Component -> builder.addTypeVariable(generatorInfo.toComponentTypeVarName())
             .addKdoc(generatorInfo.componentParam.toKdocValue())
-        ParamType.Model -> addTypeVariable(generatorInfo.toModelTypeVarName())
+        ParamType.Model -> builder.addTypeVariable(
+            generatorInfo.toModelTypeVarName()
+                .copy(bounds = listOf(modelInfo.target.asTypeName().copy(nullable = modelInfo.nullable)))
+        )
             .addKdoc(generatorInfo.modelParam.toKdocValue())
     }
+
+
+//    private fun FunSpec.Builder.addTypeVar(type: ParamType) = when (type) {
+//        ParamType.Component -> addTypeVariable(generatorInfo.toComponentTypeVarName())
+//            .addKdoc(generatorInfo.componentParam.toKdocValue())
+//        ParamType.Model -> addTypeVariable(generatorInfo.toModelTypeVarName())
+//            .addKdoc(generatorInfo.modelParam.toKdocValue())
+//    }
 
 }

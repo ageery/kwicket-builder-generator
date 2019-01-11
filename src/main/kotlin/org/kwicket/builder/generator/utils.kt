@@ -16,3 +16,5 @@ internal fun Map<*, *>.toLiteralMapCodeBlock() = CodeBlock.of(
 
 internal fun KClass<*>.modelParam(context: TypeContext) = asTypeName()
     .parameterizedBy(if (context.isModelParameterNamed) context.generatorInfo.toModelTypeVarName() else STAR)
+
+internal fun TypeName.nullable() = copy(nullable = true)

@@ -16,7 +16,7 @@ data class PropInfo(
     val name: String,
     val type: ConfigInfo.(TypeContext) -> TypeName,
     val mutable: Boolean = true,
-    val default: (ConfigInfo.() -> CodeBlock?)? = { CodeBlock.of(nullDefault) },
+    val default: (ConfigInfo.(TypeName) -> CodeBlock?)? = { if (it.isNullable) CodeBlock.of(nullDefault) else null },
     val desc: PropInfo.() -> String = { "info about $name" }
 )
 

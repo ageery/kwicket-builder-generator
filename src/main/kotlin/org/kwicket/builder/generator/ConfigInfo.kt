@@ -106,3 +106,9 @@ class ModelInfo(
     val target: KClass<*> = Any::class,
     val nullable: Boolean = true
 )
+
+val ModelInfo.isUseTypeVar: Boolean
+    get() = type == TargetType.Unbounded || nullable
+
+val ModelInfo.isExactlyOneType: Boolean
+    get() = type == TargetType.Exact && (!nullable)

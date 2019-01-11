@@ -26,7 +26,7 @@ val qMethodTypeName = ClassName("org.kwicket.builder.queued", "q")
 
 // props
 
-internal val blockPropInfo = PropInfo(
+internal val includeBlockPropInfo = PropInfo(
     name = "block",
     mutable = true,
     desc = { "optional block to execute to configure the component" },
@@ -34,9 +34,29 @@ internal val blockPropInfo = PropInfo(
     type = {
         LambdaTypeName.get(
             receiver = toClassName(it.generatorInfo.configInterface)
-                .parameterizedBy(if (it.isModelParameterNamed) it.generatorInfo.toModelTypeVarName() else STAR),
+                .parameterizedBy(
+                    if (modelInfo.isExactlyOneType) null
+                    else if (it.isModelParameterNamed) it.generatorInfo.toModelTypeVarName() else STAR
+                ),
             returnType = Unit::class.asTypeName()
         ).copy(nullable = true)
+    }
+)
+
+internal val tagBlockPropInfo = PropInfo(
+    name = "block",
+    mutable = true,
+    desc = { "optional block to execute to configure the component" },
+    default = { emptyLambda },
+    type = {
+        LambdaTypeName.get(
+            receiver = toClassName(it.generatorInfo.tagClass)
+                .parameterizedBy(
+                    if (modelInfo.isExactlyOneType) null
+                    else if (it.isModelParameterNamed) it.generatorInfo.toModelTypeVarName() else STAR
+                ),
+            returnType = Unit::class.asTypeName()
+        )
     }
 )
 
@@ -58,7 +78,9 @@ internal val initialAttrsPropInfo = PropInfo(
 internal val configPropInfo = PropInfo(
     name = "config",
     default = null,
-    type = { toClassName(it.generatorInfo.configInterface).parameterizedBy(it.generatorInfo.toModelTypeVarName()) }
+    type = { toClassName(it.generatorInfo.configInterface)
+            // FIXME: we should pull the if-stmt out into some sort of function
+        .parameterizedBy(if (modelInfo.isUseTypeVar) it.generatorInfo.toModelTypeVarName() else null) }
 )
 
 internal val factoryPropInfo = PropInfo(
@@ -67,18 +89,19 @@ internal val factoryPropInfo = PropInfo(
     type = {
         LambdaTypeName.get(
             returnType = componentInfo.target.asTypeName().parameterizedBy(
-                if (modelInfo.type == TargetType.Unbounded) it.generatorInfo.toModelTypeVarName() else null
+                //if (modelInfo.type == TargetType.Unbounded) it.generatorInfo.toModelTypeVarName() else null
+                if (componentInfo.isTargetParameterizedByModel) it.generatorInfo.toModelTypeVarName() else null
             ),
             parameters = *arrayOf(
                 stringTypeName,
-                toClassName(it.generatorInfo.configInterface).parameterizedBy(it.generatorInfo.toModelTypeVarName())
+                toClassName(it.generatorInfo.configInterface).parameterizedBy(if (modelInfo.isUseTypeVar) it.generatorInfo.toModelTypeVarName() else null)
             )
         )
     }
 )
 
 internal fun idPropInfo(isNullable: Boolean = false) = PropInfo(
-    name = "id", type = { nullableStringTypeName },
+    name = "id", type = { String::class.asTypeName().copy(nullable = isNullable) },
     default = { if (isNullable) CodeBlock.of(nullDefault) else null },
     mutable = false,
     desc = { "Wicket component id" }
