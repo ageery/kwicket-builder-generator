@@ -17,6 +17,10 @@ import com.squareup.kotlinpoet.TypeVariableName
 // * @property componentParameterName parameter name to use for components
 // * @property modelParameterName parameter name to use for models
  */
+/*
+internal val configurableComponentTagTypeName = ClassName("org.kwicket.builder.dsl", "ConfigurableComponentTag")
+internal val factoryInvokeTypeName = ClassName("org.kwicket.builder.factory", "invoke")
+ */
 class GeneratorInfo(
     val configInterface: ClassInfo,
     val configClass: ClassInfo,
@@ -24,6 +28,8 @@ class GeneratorInfo(
     val includeMethod: ClassInfo,
     val tagClass: ClassInfo,
     val tagMethod: ClassInfo,
+    val baseTagClass: ClassInfo,
+    val includeFactory: ClassInfo,
 //    val componentParameterName: String = "C",
 //    val modelParameterName: String = "T",
 //    val componentParameterKdoc: String = "type of the Wicket component",

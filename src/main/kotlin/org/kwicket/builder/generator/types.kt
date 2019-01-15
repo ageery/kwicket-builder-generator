@@ -4,6 +4,7 @@ import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import kotlinx.html.TagConsumer
 import org.apache.wicket.model.IModel
+import org.kwicket.builder.generator.components.generatorInfo
 
 // generic types
 
@@ -13,11 +14,6 @@ internal val nullableBooleanTypeName = Boolean::class.asTypeName().copy(nullable
 internal val stringMapTypeName = Map::class.asTypeName().parameterizedBy(stringTypeName, stringTypeName)
 internal val nullableStringModelTypeName =
     IModel::class.asTypeName().parameterizedBy(String::class.asTypeName()).copy(nullable = true)
-
-// kwicket classes
-
-internal val configurableComponentTagTypeName = ClassName("org.kwicket.builder.dsl", "ConfigurableComponentTag")
-internal val factoryInvokeTypeName = ClassName("org.kwicket.builder.factory", "invoke")
 
 // methods
 
@@ -85,7 +81,7 @@ internal val configPropInfo = PropInfo(
 
 internal val factoryPropInfo = PropInfo(
     name = "factory",
-    default = { CodeBlock.of("{ cid, c -> c.%T(cid) }", factoryInvokeTypeName) },
+    default = { CodeBlock.of("{ cid, c -> c.%T(cid) }", toClassName(generatorInfo.factoryMethod)) },
     type = {
         LambdaTypeName.get(
             returnType = componentInfo.target.asTypeName().parameterizedBy(

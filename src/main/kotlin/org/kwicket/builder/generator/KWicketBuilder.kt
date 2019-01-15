@@ -177,7 +177,6 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
                         isModelParameterNamed = isModelParameterNamed
                     )
                 }
-                // FIXME:
                 addParam(
                     includeBlockPropInfo,
                     kdoc = KdocOption.Method,
@@ -188,8 +187,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
                 addCode(
                     CodeBlock.of(
                         """return %T(id = id, block = block, factory = { cid, config -> config.%T(cid) }, config = %L)""",
-                        qMethodTypeName,
-                        toClassName(generatorInfo.factoryMethod),
+                        toClassName(generatorInfo.includeFactory), toClassName(generatorInfo.factoryMethod),
                         CodeBlock.of(
                             """%T(${props.joinToString(", ") { "${it.name} = ${it.name}" }})""", toInvokeConfigClassName(isModelParameterNamed) // toClassName(generatorInfo.configClass)
                         )
@@ -244,11 +242,10 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
     private val ConfigInfo.configInterfaceTypeName: TypeName
         get() = toConfigInterfaceName().parameterizedBy(if (modelInfo.isUseTypeVar) generatorInfo.toModelTypeVarName() else null)
 
-    private fun ConfigInfo.toTagSuperClass() = configurableComponentTagTypeName
+    private fun ConfigInfo.toTagSuperClass() =  toClassName(generatorInfo.baseTagClass)
         .parameterizedBy(
             toSuperInterfaceModelParameter() ?: modelInfo.target.asClassName(),
             toSuperInterfaceComponentParameter(),
-            //toConfigInterfaceName().parameterizedBy(toSuperInterfaceModelParameter())
             configInterfaceTypeName
         )
 

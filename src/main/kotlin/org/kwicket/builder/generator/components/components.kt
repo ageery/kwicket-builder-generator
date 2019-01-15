@@ -51,9 +51,11 @@ val generatorInfo = GeneratorInfo(
     configInterface = ClassInfo(toPackage = { "org.kwicket.builder.config" }, toName = { "I${basename}Config" }),
     configClass = ClassInfo(toPackage = { "org.kwicket.builder.config" }, toName = { "${basename}Config" }),
     factoryMethod = ClassInfo(toPackage = { "org.kwicket.builder.factory" }, toName = { "invoke" }),
-    includeMethod = ClassInfo(toPackage = { "org.kwicket.builder.include" }, toName = { basename.decapitalize() }),
-    tagClass = ClassInfo(toPackage = { "org.kwicket.builder.tag" }, toName = { "${basename}Tag" }),
-    tagMethod = ClassInfo(toPackage = { "org.kwicket.builder.tag" }, toName = { basename.decapitalize() })
+    includeMethod = ClassInfo(toPackage = { "org.kwicket.builder.include.dsl" }, toName = { basename.decapitalize() }),
+    tagClass = ClassInfo(toPackage = { "org.kwicket.builder.tag.dsl" }, toName = { "${basename}Tag" }),
+    tagMethod = ClassInfo(toPackage = { "org.kwicket.builder.tag.dsl" }, toName = { basename.decapitalize() }),
+    baseTagClass = ClassInfo(toPackage = { "org.kwicket.builder.tag" }, toName = { "ConfigurableComponentTag" }),
+    includeFactory = ClassInfo(toPackage = { "org.kwicket.builder.include" }, toName = { "q" })
 )
 
 val componentConfig = ConfigInfo(
