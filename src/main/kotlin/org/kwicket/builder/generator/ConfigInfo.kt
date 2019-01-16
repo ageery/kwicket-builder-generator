@@ -107,8 +107,14 @@ class ModelInfo(
     val nullable: Boolean = true
 )
 
+/**
+ * Whether the [ModelInfo] uses the type variable.
+ */
 val ModelInfo.isUseTypeVar: Boolean
     get() = type == TargetType.Unbounded || nullable
 
+/**
+ * Whether the [ModelInfo] specifies exactly one type.
+ */
 val ModelInfo.isExactlyOneType: Boolean
     get() = type == TargetType.Exact && (!nullable)

@@ -45,7 +45,7 @@ import java.time.format.FormatStyle
 import kotlin.reflect.KClass
 
 /**
- * kWicket generator information.
+ * kWicket package and class info.
  */
 val generatorInfo = GeneratorInfo(
     configInterface = ClassInfo(toPackage = { "org.kwicket.builder.config" }, toName = { "I${basename}Config" }),
@@ -58,6 +58,9 @@ val generatorInfo = GeneratorInfo(
     includeFactory = ClassInfo(toPackage = { "org.kwicket.builder.include" }, toName = { "q" })
 )
 
+/**
+ * [Component] config def.
+ */
 val componentConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = Component::class),
     modelInfo = ModelInfo(),
@@ -143,17 +146,26 @@ val componentConfig = ConfigInfo(
     )
 )
 
+/**
+ * [WebMarkupContainer] config def.
+ */
 val webMarkupContainerConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = WebMarkupContainer::class),
     parent = componentConfig
 )
 
+/**
+ * [Label] config def.
+ */
 val labelConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = Label::class),
     parent = componentConfig,
     tagInfo = TagInfo(tagName = "span")
 )
 
+/**
+ * [DebugBar] config def.
+ */
 val debugBarConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = DebugBar::class),
     parent = componentConfig,
@@ -167,12 +179,18 @@ val debugBarConfig = ConfigInfo(
     )
 )
 
+/**
+ * [MultiLineLabel] config def.
+ */
 val multiLineLabelConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = MultiLineLabel::class),
     parent = componentConfig,
     tagInfo = TagInfo(tagName = "span")
 )
 
+/**
+ * [FormComponent] config def.
+ */
 val formComponentConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = FormComponent::class, isTargetParameterizedByModel = true),
     isConfigOnly = true,
@@ -226,12 +244,18 @@ val formComponentConfig = ConfigInfo(
     )
 )
 
+/**
+ * [TextField] config def.
+ */
 val textFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = TextField::class, isTargetParameterizedByModel = true),
     parent = formComponentConfig,
     tagInfo = TagInfo(tagName = "input", attrs = mapOf("type" to "text"))
 )
 
+/**
+ * Abstract [Button] config def.
+ */
 val abstractButtonConfig = ConfigInfo(
     basename = "AbstractButton",
     componentInfo = ComponentInfo(target = Button::class),
@@ -248,6 +272,9 @@ val abstractButtonConfig = ConfigInfo(
     )
 )
 
+/**
+ * [AjaxFallbackButton] config def.
+ */
 val ajaxFallbackButtonConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = AjaxFallbackButton::class),
     modelInfo = ModelInfo(
@@ -287,6 +314,9 @@ val ajaxFallbackButtonConfig = ConfigInfo(
     )
 )
 
+/**
+ * [Button] config def.
+ */
 val buttonConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = Button::class),
     parent = abstractButtonConfig,
@@ -315,6 +345,9 @@ val buttonConfig = ConfigInfo(
     )
 )
 
+/**
+ * [CheckBox] config def.
+ */
 val checkBoxConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = CheckBox::class),
     modelInfo = ModelInfo(type = TargetType.Exact, target = Boolean::class, nullable = false),
@@ -322,6 +355,9 @@ val checkBoxConfig = ConfigInfo(
     tagInfo = TagInfo(tagName = "input", attrs = mapOf("type" to "checkbox"))
 )
 
+/**
+ * Abstract [Link] config def.
+ */
 val abstractLinkConfig = ConfigInfo(
     basename = "AbstractLink",
     componentInfo = ComponentInfo(target = Link::class),
@@ -337,6 +373,9 @@ val abstractLinkConfig = ConfigInfo(
     tagInfo = TagInfo(tagName = "a")
 )
 
+/**
+ * [Link] config def.
+ */
 val linkConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = Link::class),
     parent = abstractLinkConfig,
@@ -356,6 +395,9 @@ val linkConfig = ConfigInfo(
     )
 )
 
+/**
+ * [AjaxLink] config def.
+ */
 val ajaxLinkConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = AjaxLink::class),
     parent = abstractLinkConfig,
@@ -376,6 +418,9 @@ val ajaxLinkConfig = ConfigInfo(
     )
 )
 
+/**
+ * [BookmarkablePageLink] config def.
+ */
 val bookmarkablePageLinkConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = BookmarkablePageLink::class),
     parent = abstractLinkConfig,
@@ -393,6 +438,9 @@ val bookmarkablePageLinkConfig = ConfigInfo(
     )
 )
 
+/**
+ * [AjaxFallbackLink] config def.
+ */
 val ajaxFallbackLinkConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = AjaxFallbackLink::class),
     parent = abstractLinkConfig,
@@ -413,6 +461,9 @@ val ajaxFallbackLinkConfig = ConfigInfo(
     )
 )
 
+/**
+ * [AjaxSubmitLink] config def.
+ */
 val ajaxSubmitLinkConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = AjaxSubmitLink::class),
     parent = abstractLinkConfig,
@@ -448,6 +499,9 @@ val ajaxSubmitLinkConfig = ConfigInfo(
     )
 )
 
+/**
+ * [Check] config def.
+ */
 val checkConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = Check::class),
     parent = componentConfig,
@@ -460,7 +514,10 @@ val checkConfig = ConfigInfo(
     )
 )
 
-val dropDownConfig = ConfigInfo(
+/**
+ * [DropDownChoice] config def.
+ */
+val dropDownChoiceConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = DropDownChoice::class),
     parent = formComponentConfig,
     props = listOf(
@@ -493,18 +550,9 @@ val dropDownConfig = ConfigInfo(
     )
 )
 
-//val emailLinkConfig = ConfigInfo(
-//    componentInfo = ComponentInfo(target = Emai::class),
-//    parent = abstractLinkConfig,
-//    props = listOf(
-//        PropInfo(
-//            name = "label",
-//            type = { IModel::class.asTypeName().parameterizedBy(STAR).copy(nullable = true) },
-//            desc = { "label for the link" }
-//        )
-//    )
-//)
-
+/**
+ * [FeedbackPanel] config def.
+ */
 val feedbackPanelConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = FeedbackPanel::class),
     modelInfo = ModelInfo(type = TargetType.Exact, target = Unit::class, nullable = false),
@@ -518,6 +566,9 @@ val feedbackPanelConfig = ConfigInfo(
     )
 )
 
+/**
+ * Abstract [Image] config def.
+ */
 val abstractImageConfig = ConfigInfo(
     basename = "AbstractImage",
     componentInfo = ComponentInfo(target = Image::class),
@@ -566,11 +617,17 @@ val abstractImageConfig = ConfigInfo(
     )
 )
 
+/**
+ * [Image] config def.
+ */
 val imageConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = Image::class),
     parent = abstractImageConfig
 )
 
+/**
+ * [Source] config def.
+ */
 val sourceConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = Source::class),
     parent = abstractImageConfig,
@@ -588,6 +645,9 @@ val sourceConfig = ConfigInfo(
     )
 )
 
+/**
+ * [InlineImage] config def.
+ */
 val inlineImageConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = InlineImage::class),
     parent = componentConfig,
@@ -600,6 +660,9 @@ val inlineImageConfig = ConfigInfo(
     )
 )
 
+/**
+ * [ListView] config def.
+ */
 val listViewConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = ListView::class),
     parent = componentConfig,
@@ -618,6 +681,9 @@ val listViewConfig = ConfigInfo(
     )
 )
 
+/**
+ * [LocalDateTextField] config def.
+ */
 val localDateTextFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = LocalDateTextField::class),
     modelInfo = ModelInfo(target = LocalDate::class, nullable = true, type = TargetType.Exact), // generate a T parameter if the target is nullable
@@ -641,6 +707,9 @@ val localDateTextFieldConfig = ConfigInfo(
     )
 )
 
+/**
+ * [LocalDateTimeField] config def.
+ */
 val localDateTimeFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = LocalDateTimeField::class),
     modelInfo = ModelInfo(type = TargetType.Exact, target = LocalDateTime::class, nullable = true),
@@ -674,6 +743,9 @@ val localDateTimeFieldConfig = ConfigInfo(
     )
 )
 
+/**
+ * [LocalDateTimeTextField] config def.
+ */
 val localDateTimeTextFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = LocalDateTimeTextField::class),
     modelInfo = ModelInfo(type = TargetType.Exact, target = LocalDateTime::class, nullable = true),
@@ -697,12 +769,18 @@ val localDateTimeTextFieldConfig = ConfigInfo(
     )
 )
 
+/**
+ * [Picture] config def.
+ */
 val pictureConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = Picture::class),
     parent = componentConfig,
     tagInfo = TagInfo(tagName = "picture")
 )
 
+/**
+ * [RadioChoice] config def.
+ */
 val radioChoiceConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = RadioChoice::class),
     parent = formComponentConfig,
@@ -736,6 +814,9 @@ val radioChoiceConfig = ConfigInfo(
     )
 )
 
+/**
+ * [Radio] config def.
+ */
 val radioConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = Radio::class),
     parent = componentConfig,
@@ -754,18 +835,27 @@ val radioConfig = ConfigInfo(
     tagInfo = TagInfo(tagName = "input", attrs = mapOf("type" to "radio"))
 )
 
+/**
+ * [RadioGroup] config def.
+ */
 val radioGroupConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = RadioGroup::class),
     parent = formComponentConfig,
     tagInfo = TagInfo(tagName = "span")
 )
 
+/**
+ * [Select] config def.
+ */
 val selectConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = Select::class),
     parent = formComponentConfig,
     tagInfo = TagInfo(tagName = "select")
 )
 
+/**
+ * [StatelessLink] config def.
+ */
 val statelessLinkConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = StatelessLink::class),
     isConfigOnly = false,
@@ -784,6 +874,9 @@ val statelessLinkConfig = ConfigInfo(
     )
 )
 
+/**
+ * [SubmitLink] config def.
+ */
 val submitLinkConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = SubmitLink::class),
     isConfigOnly = false,
@@ -817,6 +910,9 @@ val submitLinkConfig = ConfigInfo(
     )
 )
 
+/**
+ * [List] of all of the component config defs.
+ */
 val allComponents = listOf(
     componentConfig,
     labelConfig,
@@ -836,7 +932,7 @@ val allComponents = listOf(
     ajaxFallbackLinkConfig,
     ajaxSubmitLinkConfig,
     checkConfig,
-    dropDownConfig,
+    dropDownChoiceConfig,
     //emailLinkConfig,
     feedbackPanelConfig,
     abstractImageConfig,

@@ -14,12 +14,8 @@ import com.squareup.kotlinpoet.TypeVariableName
  * @property tagMethod how to derive the tag package and method name from a [ConfigInfo] object
  * @property componentParam parameter info for the component parameter
  * @property modelParam parameter info for the model parameter
-// * @property componentParameterName parameter name to use for components
-// * @property modelParameterName parameter name to use for models
- */
-/*
-internal val configurableComponentTagTypeName = ClassName("org.kwicket.builder.dsl", "ConfigurableComponentTag")
-internal val factoryInvokeTypeName = ClassName("org.kwicket.builder.factory", "invoke")
+ * @property baseTagClass how to derive the class kWicket tags are supposed to extend from
+ * @property includeFactory how to derive the method used to include a component in a parent
  */
 class GeneratorInfo(
     val configInterface: ClassInfo,
@@ -30,10 +26,6 @@ class GeneratorInfo(
     val tagMethod: ClassInfo,
     val baseTagClass: ClassInfo,
     val includeFactory: ClassInfo,
-//    val componentParameterName: String = "C",
-//    val modelParameterName: String = "T",
-//    val componentParameterKdoc: String = "type of the Wicket component",
-//    val modelParameterKdoc: String = "type of the component model",
     val componentParam: ParamInfo = ParamInfo(name = "C", kdoc = "type of the Wicket component"),
     val modelParam: ParamInfo = ParamInfo(name = "T", kdoc = "type of the component model")
 )
@@ -70,4 +62,10 @@ class ClassInfo(val toPackage: ConfigInfo.() -> String, val toName: ConfigInfo.(
  */
 class ParamInfo(val name: String, val kdoc: String)
 
+/**
+ * Returns a kdoc line for the [ParamInfo].
+ *
+ * @receiver [ParamInfo] to create a kdoc for
+ * @return kdoc line for the [ParamInfo]
+ */
 fun ParamInfo.toKdocValue() = "@param $name $kdoc\n"

@@ -14,11 +14,7 @@ internal val nullableBooleanTypeName = Boolean::class.asTypeName().copy(nullable
 internal val stringMapTypeName = Map::class.asTypeName().parameterizedBy(stringTypeName, stringTypeName)
 internal val nullableStringModelTypeName =
     IModel::class.asTypeName().parameterizedBy(String::class.asTypeName()).copy(nullable = true)
-
-// methods
-
 internal val visitMethod = ClassName("kotlinx.html", "visit")
-val qMethodTypeName = ClassName("org.kwicket.builder.queued", "q")
 
 // props
 

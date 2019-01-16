@@ -361,12 +361,4 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
             .addKdoc(generatorInfo.modelParam.toKdocValue())
     }
 
-
-//    private fun FunSpec.Builder.addTypeVar(type: ParamType) = when (type) {
-//        ParamType.Component -> addTypeVariable(generatorInfo.toComponentTypeVarName())
-//            .addKdoc(generatorInfo.componentParam.toKdocValue())
-//        ParamType.Model -> addTypeVariable(generatorInfo.toModelTypeVarName())
-//            .addKdoc(generatorInfo.modelParam.toKdocValue())
-//    }
-
 }

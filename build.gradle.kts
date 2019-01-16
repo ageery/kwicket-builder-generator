@@ -6,13 +6,12 @@ import java.net.URL
 
 val wicketVersion = "8.2.0"
 val kotlinxHtmlVersion = "0.6.11"
-val kotlinPoetVersion = "1.0.0"
-val mavenPubName = "mavenJavaLibrary"
+val kotlinPoetVersion = "1.0.1"
 
 plugins {
     kotlin("jvm") version "1.3.11"
     id("org.jetbrains.dokka") version "0.9.16"
-    id("maven-publish")
+    `maven-publish`
 }
 
 group = "org.kwicket"
@@ -41,6 +40,9 @@ val dokkaJavadocTask = tasks.withType<DokkaTask> {
     externalDocumentationLink(delegateClosureOf<DokkaConfiguration.ExternalDocumentationLink.Builder> {
         url = URL("https://ci.apache.org/projects/wicket/apidocs/8.x/")
     })
+    externalDocumentationLink(delegateClosureOf<DokkaConfiguration.ExternalDocumentationLink.Builder> {
+        url = URL("https://square.github.io/kotlinpoet/1.x/kotlinpoet/")
+    })
     cacheRoot = "default"
 }
 
@@ -55,9 +57,9 @@ val javadocJar by tasks.creating(Jar::class) {
     classifier = "javadoc"
 }
 
-configure<PublishingExtension> {
+publishing {
     publications {
-        create<MavenPublication>(mavenPubName) {
+        create<MavenPublication>("maven") {
             from(components.getByName("java"))
             artifact(sourcesJar)
             artifact(javadocJar)

@@ -24,13 +24,31 @@ data class PropInfo(
  * Type of code being generated.
  */
 enum class GeneratorType {
+    /**
+     * Generate a configuration interface.
+     */
     ConfigInterface,
+    /**
+     * Generate a configuration class.
+     */
     ConfigClass,
+    /**
+     * Generate an include method.
+     */
     IncludeMethod,
+    /**
+     * Generate a tag class.
+     */
     TagClass,
+    /**
+     * Generate a tag method.
+     */
     TagMethod
 }
 
+/**
+ * Whether the [GeneratorType] is for a method (as opposed to an interface or class).
+ */
 val GeneratorType.isMethod: Boolean
     get() = this == GeneratorType.IncludeMethod || this == GeneratorType.TagMethod
 
