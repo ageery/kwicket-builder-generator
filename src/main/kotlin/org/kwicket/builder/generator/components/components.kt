@@ -19,6 +19,7 @@ import org.apache.wicket.markup.html.WebMarkupContainer
 import org.apache.wicket.markup.html.basic.Label
 import org.apache.wicket.markup.html.basic.MultiLineLabel
 import org.apache.wicket.markup.html.form.*
+import org.apache.wicket.markup.html.form.upload.FileUpload
 import org.apache.wicket.markup.html.form.upload.FileUploadField
 import org.apache.wicket.markup.html.image.Image
 import org.apache.wicket.markup.html.image.InlineImage
@@ -740,6 +741,17 @@ val feedbackPanelConfig = ConfigInfo(
 )
 
 /**
+ * [FileUploadField] config def.
+ * FIXME: why does MutableList::class.asClassName() -> List not MutableList?
+ */
+val fileUploadFieldConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = FileUploadField::class),
+    modelInfo = ModelInfo(type = TargetType.Exact,
+        target = MutableList::class.asClassName().parameterizedBy(FileUpload::class.asTypeName()), nullable = false),
+    parent = formComponentConfig
+)
+
+/**
  * Abstract [Image] config def.
  */
 val abstractImageConfig = ConfigInfo(
@@ -1297,5 +1309,6 @@ val allComponents = listOf(
     zonedDateTimeFieldConfig,
     mediaComponentConfig,
     audioConfig,
-    videoConfig
+    videoConfig,
+    fileUploadFieldConfig
 )
