@@ -80,8 +80,7 @@ val componentConfig = ConfigInfo(
             type = {
                 IModel::class.asTypeName()
                     .parameterizedBy(
-                        if (modelInfo.isExactlyOneType)
-                            modelInfo.target.asTypeName()
+                        if (modelInfo.isExactlyOneType) modelInfo.target
                         else it.modelTypeName
                     ).copy(nullable = this.modelInfo.nullable && (!it.type.isMethod))
             },
@@ -293,9 +292,9 @@ val formComponentConfig = ConfigInfo(
                 IValidator::class.asTypeName()
                     .parameterizedBy(
                         when {
-                            modelInfo.isExactlyOneType -> modelInfo.target.asTypeName() // FIXME: I don't understand why this is necessary
+                            modelInfo.isExactlyOneType -> modelInfo.target
                             it.isModelParameterNamed -> it.modelTypeName
-                            modelInfo.type == TargetType.Exact -> modelInfo.target.asTypeName().copy(nullable = modelInfo.nullable)
+                            modelInfo.type == TargetType.Exact -> modelInfo.target
                             it.modelTypeName == STAR -> Any::class.asTypeName().nullable()
                             else -> null
                         }
@@ -310,9 +309,9 @@ val formComponentConfig = ConfigInfo(
                     IValidator::class.asTypeName()
                         .parameterizedBy(
                             when {
-                                modelInfo.isExactlyOneType -> modelInfo.target.asTypeName() // FIXME: I don't understand why this is necessary
+                                modelInfo.isExactlyOneType -> modelInfo.target
                                 it.isModelParameterNamed -> it.modelTypeName
-                                modelInfo.type == TargetType.Exact -> modelInfo.target.asTypeName().copy(nullable = modelInfo.nullable)
+                                modelInfo.type == TargetType.Exact -> modelInfo.target
                                 it.modelTypeName == STAR -> Any::class.asTypeName().nullable()
                                 else -> null
                             }
@@ -348,7 +347,7 @@ val textFieldConfig = ConfigInfo(
 val abstractButtonConfig = ConfigInfo(
     basename = "AbstractButton",
     componentInfo = ComponentInfo(target = Button::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = String::class),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = nullableStringTypeName),
     tagInfo = TagInfo(tagName = "button"),
     isConfigOnly = true,
     parent = componentConfig,
@@ -368,7 +367,7 @@ val ajaxButtonConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = AjaxButton::class),
     modelInfo = ModelInfo(
         type = TargetType.Exact,
-        target = String::class
+        target = nullableStringTypeName
     ),
     parent = abstractButtonConfig,
     isConfigOnly = false,
@@ -410,7 +409,7 @@ val ajaxFallbackButtonConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = AjaxFallbackButton::class),
     modelInfo = ModelInfo(
         type = TargetType.Exact,
-        target = String::class
+        target = nullableStringTypeName
     ),
     parent = abstractButtonConfig,
     isConfigOnly = false,
@@ -451,7 +450,7 @@ val ajaxFallbackButtonConfig = ConfigInfo(
 val buttonConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = Button::class),
     parent = abstractButtonConfig,
-    modelInfo = ModelInfo(type = TargetType.Exact, target = String::class),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = nullableStringTypeName),
     props = listOf(
         PropInfo(
             name = "onSubmit",
@@ -481,7 +480,7 @@ val buttonConfig = ConfigInfo(
  */
 val checkBoxConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = CheckBox::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = Boolean::class, nullable = false),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = Boolean::class.asTypeName(), nullable = false),
     parent = formComponentConfig,
     tagInfo = TagInfo(tagName = "input", attrs = mapOf("type" to "checkbox"))
 )
@@ -509,7 +508,7 @@ val abstractLinkConfig = ConfigInfo(
  */
 val externalLinkConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = ExternalLink::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = String::class, nullable = true),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = nullableStringTypeName),
     parent = componentConfig,
     props = listOf(
         PropInfo(
@@ -729,7 +728,7 @@ val dropDownChoiceConfig = ConfigInfo(
  */
 val feedbackPanelConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = FeedbackPanel::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = Unit::class, nullable = false),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = Unit::class.asClassName(), nullable = false),
     parent = componentConfig,
     props = listOf(
         PropInfo(
@@ -861,10 +860,9 @@ val listViewConfig = ConfigInfo(
 val localDateTextFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = LocalDateTextField::class),
     modelInfo = ModelInfo(
-        target = LocalDate::class,
-        nullable = true,
+        target = LocalDate::class.asClassName().nullable(),
         type = TargetType.Exact
-    ), // generate a T parameter if the target is nullable
+    ),
     parent = formComponentConfig,
     props = listOf(
         PropInfo(
@@ -890,7 +888,7 @@ val localDateTextFieldConfig = ConfigInfo(
  */
 val localDateTimeFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = LocalDateTimeField::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = LocalDateTime::class, nullable = true),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = LocalDateTime::class.asClassName().nullable()),
     parent = formComponentConfig,
     props = listOf(
         PropInfo(
@@ -926,7 +924,7 @@ val localDateTimeFieldConfig = ConfigInfo(
  */
 val localDateTimeTextFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = LocalDateTimeTextField::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = LocalDateTime::class, nullable = true),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = LocalDateTime::class.asClassName().nullable()),
     parent = formComponentConfig,
     props = listOf(
         PropInfo(
@@ -1203,7 +1201,7 @@ val submitLinkConfig = ConfigInfo(
  */
 val timeFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = TimeField::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = LocalTime::class, nullable = true),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = LocalTime::class.asClassName().nullable()),
     parent = formComponentConfig,
     props = listOf(
         PropInfo(
@@ -1219,7 +1217,7 @@ val timeFieldConfig = ConfigInfo(
  */
 val zonedDateTimeFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = ZonedDateTimeField::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = ZonedDateTime::class, nullable = true),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = ZonedDateTime::class.asClassName().nullable()),
     parent = formComponentConfig,
     props = listOf(
         PropInfo(

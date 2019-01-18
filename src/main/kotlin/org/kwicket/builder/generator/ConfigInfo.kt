@@ -1,6 +1,8 @@
 package org.kwicket.builder.generator
 
 import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.TypeName
+import com.squareup.kotlinpoet.asTypeName
 import kotlin.reflect.KClass
 
 /**
@@ -103,7 +105,7 @@ class ComponentInfo(
  */
 class ModelInfo(
     val type: TargetType = TargetType.Unbounded,
-    val target: KClass<*> = Any::class, // FIXME: this needs to change to TypeName & it needs to be a
+    val target: TypeName = Any::class.asTypeName().nullable(),
     val nullable: Boolean = true
 )
 

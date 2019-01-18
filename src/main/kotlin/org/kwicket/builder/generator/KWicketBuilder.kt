@@ -235,7 +235,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
 
     private fun ConfigInfo.toInvokeConfigClassName(isModelParameterNamed: Boolean) =
         toClassName(generatorInfo.configClass)
-            .parameterizedBy(if (isModelParameterNamed || (parent?.componentInfo?.isTargetParameterizedByModel == true)) null else if (modelInfo.type == TargetType.Exact && modelInfo.nullable) modelInfo.target.asTypeName().nullable() else null)
+            .parameterizedBy(if (isModelParameterNamed || (parent?.componentInfo?.isTargetParameterizedByModel == true)) null else if (modelInfo.type == TargetType.Exact && modelInfo.nullable) modelInfo.target else null)
 
     private fun ConfigInfo.toTagClassName() = toClassName(generatorInfo.tagClass)
 
@@ -250,7 +250,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
 
     private fun ConfigInfo.toTagSuperClass() = toClassName(generatorInfo.baseTagClass)
         .parameterizedBy(
-            toSuperInterfaceModelParameter() ?: modelInfo.target.asClassName(),
+            toSuperInterfaceModelParameter() ?: modelInfo.target,
             toSuperInterfaceComponentParameter(),
             configInterfaceTypeName
         )
@@ -338,7 +338,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
 
     private fun ConfigInfo.toSuperInterfaceModelParameter() = when {
         modelInfo.isUseTypeVar -> generatorInfo.toModelTypeVarName()
-        parent?.modelInfo?.type == TargetType.Unbounded -> modelInfo.target.asClassName()
+        parent?.modelInfo?.type == TargetType.Unbounded -> modelInfo.target
         else -> null
     }
 
@@ -362,7 +362,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
             .addKdoc(generatorInfo.componentParam.toKdocValue())
         ParamType.Model -> builder.addTypeVariable(
             generatorInfo.toModelTypeVarName()
-                .copy(bounds = listOf(modelInfo.target.asTypeName().copy(nullable = modelInfo.nullable)))
+                .copy(bounds = listOf(modelInfo.target))
         )
             .addKdoc(generatorInfo.modelParam.toKdocValue())
     }
@@ -372,7 +372,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
             .addKdoc(generatorInfo.componentParam.toKdocValue())
         ParamType.Model -> builder.addTypeVariable(
             generatorInfo.toModelTypeVarName()
-                .copy(bounds = listOf(modelInfo.target.asTypeName().copy(nullable = modelInfo.nullable)))
+                .copy(bounds = listOf(modelInfo.target))
         )
             .addKdoc(generatorInfo.modelParam.toKdocValue())
     }
