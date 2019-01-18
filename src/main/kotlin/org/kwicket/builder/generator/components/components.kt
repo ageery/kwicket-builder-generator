@@ -7,42 +7,52 @@ import org.apache.wicket.Page
 import org.apache.wicket.ajax.AjaxRequestTarget
 import org.apache.wicket.ajax.markup.html.AjaxFallbackLink
 import org.apache.wicket.ajax.markup.html.AjaxLink
+import org.apache.wicket.ajax.markup.html.form.AjaxButton
 import org.apache.wicket.ajax.markup.html.form.AjaxFallbackButton
 import org.apache.wicket.ajax.markup.html.form.AjaxSubmitLink
 import org.apache.wicket.behavior.Behavior
 import org.apache.wicket.devutils.debugbar.DebugBar
-import org.apache.wicket.extensions.markup.html.form.datetime.LocalDateTextField
-import org.apache.wicket.extensions.markup.html.form.datetime.LocalDateTimeField
-import org.apache.wicket.extensions.markup.html.form.datetime.LocalDateTimeTextField
+import org.apache.wicket.extensions.markup.html.form.datetime.*
 import org.apache.wicket.extensions.markup.html.form.select.Select
 import org.apache.wicket.feedback.IFeedbackMessageFilter
 import org.apache.wicket.markup.html.WebMarkupContainer
 import org.apache.wicket.markup.html.basic.Label
 import org.apache.wicket.markup.html.basic.MultiLineLabel
 import org.apache.wicket.markup.html.form.*
+import org.apache.wicket.markup.html.form.upload.FileUploadField
 import org.apache.wicket.markup.html.image.Image
 import org.apache.wicket.markup.html.image.InlineImage
 import org.apache.wicket.markup.html.image.Picture
 import org.apache.wicket.markup.html.image.Source
-import org.apache.wicket.markup.html.link.BookmarkablePageLink
-import org.apache.wicket.markup.html.link.Link
-import org.apache.wicket.markup.html.link.PopupSettings
-import org.apache.wicket.markup.html.link.StatelessLink
+import org.apache.wicket.markup.html.link.*
 import org.apache.wicket.markup.html.list.ListItem
 import org.apache.wicket.markup.html.list.ListView
+import org.apache.wicket.markup.html.media.MediaComponent
+import org.apache.wicket.markup.html.media.audio.Audio
+import org.apache.wicket.markup.html.media.video.Video
 import org.apache.wicket.markup.html.panel.FeedbackPanel
 import org.apache.wicket.model.IModel
 import org.apache.wicket.request.mapper.parameter.PageParameters
 import org.apache.wicket.request.resource.IResource
 import org.apache.wicket.request.resource.PackageResourceReference
 import org.apache.wicket.request.resource.ResourceReference
+import org.apache.wicket.util.lang.Bytes
 import org.apache.wicket.validation.IValidator
 import org.kwicket.builder.generator.*
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZonedDateTime
 import java.time.format.FormatStyle
 import kotlin.reflect.KClass
+
+/*
+ Migration notes:
+ - AbstractColumnConfig -- not sure what to do with this as it isn't a component...
+ - DataTable -- this has an extra type var for the sort
+ - CheckGroup -- this could be a weird one <- ** do this next ** // can't do this one -- almost need a superclass & then this will be the model -- I think this needs one more
+ - FileUpload -- this could be weird too -- it's a collection
+ */
 
 /**
  * kWicket package and class info.
@@ -147,6 +157,77 @@ val componentConfig = ConfigInfo(
 )
 
 /**
+ * Abstract [Form] config def.
+ */
+val abstractFormConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = Form::class),
+    basename = "AbstractForm",
+    isConfigOnly = true,
+    parent = componentConfig,
+    props = listOf(
+        PropInfo(
+            name = "isMultiPart",
+            type = { nullableBooleanTypeName },
+            desc = { "whether the form is a multi-part submission" }
+        ),
+        PropInfo(
+            name = "maxSize",
+            type = { Bytes::class.asTypeName().nullable() },
+            desc = { "maximum bytes the form can submit" }
+        ),
+        PropInfo(
+            name = "fileMaxSize",
+            type = { Bytes::class.asTypeName().nullable() },
+            desc = { "maximum bytes a single file in the form submission can be" }
+        ),
+        PropInfo(
+            name = "onSubmit",
+            type = {
+                LambdaTypeName.get(
+                    receiver =
+                    if (isConfigOnly)
+                        it.generatorInfo.toComponentTypeVarName()
+                    else
+                        componentInfo.target.asClassName().parameterizedBy(if (it.isModelParameterNamed) generatorInfo.toModelTypeVarName() else STAR),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "submit handler lambda" }
+        ),
+        PropInfo(
+            name = "onError",
+            type = {
+                LambdaTypeName.get(
+                    receiver =
+                    if (isConfigOnly)
+                        it.generatorInfo.toComponentTypeVarName()
+                    else
+                        componentInfo.target.asClassName().parameterizedBy(if (it.isModelParameterNamed) generatorInfo.toModelTypeVarName() else STAR),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "error handler lambda" }
+        )
+    )
+)
+
+/**
+ * [Form] config def.
+ */
+val formConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = Form::class),
+    parent = abstractFormConfig
+)
+
+/**
+ * [StatelessForm] config def.
+ */
+val statelessFormConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = StatelessForm::class),
+    parent = abstractFormConfig
+)
+
+/**
  * [WebMarkupContainer] config def.
  */
 val webMarkupContainerConfig = ConfigInfo(
@@ -208,40 +289,48 @@ val formComponentConfig = ConfigInfo(
         ),
         PropInfo(
             name = "validator",
-            type = { IValidator::class.asTypeName()
-                .parameterizedBy(
-                    when {
-                        modelInfo.isExactlyOneType -> modelInfo.target.asTypeName() // FIXME: I don't understand why this is necessary
-                        it.isModelParameterNamed -> it.modelTypeName
-                        modelInfo.type == TargetType.Exact -> modelInfo.target.asTypeName().copy(nullable = modelInfo.nullable)
-                        it.modelTypeName == STAR -> Any::class.asTypeName().nullable()
-                        else -> null
-                    }
-                ).nullable() },
+            type = {
+                IValidator::class.asTypeName()
+                    .parameterizedBy(
+                        when {
+                            modelInfo.isExactlyOneType -> modelInfo.target.asTypeName() // FIXME: I don't understand why this is necessary
+                            it.isModelParameterNamed -> it.modelTypeName
+                            modelInfo.type == TargetType.Exact -> modelInfo.target.asTypeName().copy(nullable = modelInfo.nullable)
+                            it.modelTypeName == STAR -> Any::class.asTypeName().nullable()
+                            else -> null
+                        }
+                    ).nullable()
+            },
             desc = { "validator for the form component" }
         ),
         PropInfo(
             name = "validators",
-            type = { List::class.asTypeName().parameterizedBy(IValidator::class.asTypeName()
-                .parameterizedBy(
-                    when {
-                        modelInfo.isExactlyOneType -> modelInfo.target.asTypeName() // FIXME: I don't understand why this is necessary
-                        it.isModelParameterNamed -> it.modelTypeName
-                        modelInfo.type == TargetType.Exact -> modelInfo.target.asTypeName().copy(nullable = modelInfo.nullable)
-                        it.modelTypeName == STAR -> Any::class.asTypeName().nullable()
-                        else -> null
-                    }
-                )).nullable() },
+            type = {
+                List::class.asTypeName().parameterizedBy(
+                    IValidator::class.asTypeName()
+                        .parameterizedBy(
+                            when {
+                                modelInfo.isExactlyOneType -> modelInfo.target.asTypeName() // FIXME: I don't understand why this is necessary
+                                it.isModelParameterNamed -> it.modelTypeName
+                                modelInfo.type == TargetType.Exact -> modelInfo.target.asTypeName().copy(nullable = modelInfo.nullable)
+                                it.modelTypeName == STAR -> Any::class.asTypeName().nullable()
+                                else -> null
+                            }
+                        )
+                ).nullable()
+            },
             desc = { "validator for the form component" }
         )
-        /*
-        IModel::class.asTypeName()
-                    .parameterizedBy(
-                        if (modelInfo.type == TargetType.Exact)
-                            modelInfo.target.asTypeName()
-                        else it.modelTypeName
-         */
     )
+)
+
+/**
+ * [TextArea] config def.
+ */
+val textAreaConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = TextArea::class),
+    parent = formComponentConfig,
+    tagInfo = TagInfo(tagName = "textarea")
 )
 
 /**
@@ -268,6 +357,48 @@ val abstractButtonConfig = ConfigInfo(
             name = "defaultFormProcessing",
             type = { nullableBooleanTypeName },
             desc = { "whether the button submits the data" }
+        )
+    )
+)
+
+/**
+ * [AjaxButton] config def.
+ */
+val ajaxButtonConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = AjaxButton::class),
+    modelInfo = ModelInfo(
+        type = TargetType.Exact,
+        target = String::class
+    ),
+    parent = abstractButtonConfig,
+    isConfigOnly = false,
+    props = listOf(
+        PropInfo(
+            name = "form",
+            type = { Form::class.asTypeName().parameterizedBy(STAR).nullable() },
+            desc = { "form the button is associated with" }
+        ),
+        PropInfo(
+            name = "onSubmit",
+            type = {
+                LambdaTypeName.get(
+                    receiver = AjaxButton::class.asTypeName(),
+                    parameters = * arrayOf(AjaxRequestTarget::class.asTypeName()),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "submit handler lambda" }
+        ),
+        PropInfo(
+            name = "onError",
+            type = {
+                LambdaTypeName.get(
+                    receiver = AjaxButton::class.asTypeName(),
+                    parameters = * arrayOf(AjaxRequestTarget::class.asTypeName()),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "error handler lambda" }
         )
     )
 )
@@ -374,6 +505,39 @@ val abstractLinkConfig = ConfigInfo(
 )
 
 /**
+ * [ExternalLink] config def.
+ */
+val externalLinkConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = ExternalLink::class),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = String::class, nullable = true),
+    parent = componentConfig,
+    props = listOf(
+        PropInfo(
+            name = "popupSettings",
+            type = { PopupSettings::class.asTypeName().nullable() },
+            desc = { "specifies how the link opens" }
+        ),
+        PropInfo(
+            name = "label",
+            type = {
+                IModel::class.asTypeName().parameterizedBy(STAR).copy(nullable = true)
+            },
+            desc = { "text for the link" }
+        )
+    )
+)
+
+///**
+// * [FileUploadField] config def.
+// */
+//val fileUploadFieldConfig = ConfigInfo(
+//    componentInfo = ComponentInfo(target = FileUploadField::class),
+//    modelInfo = ModelInfo(type = TargetType.Exact, target = Boolean::class, nullable = true),
+//    parent = formComponentConfig,
+//    tagInfo = TagInfo(tagName = "input", attrs = mapOf("type" to "checkbox"))
+//)
+
+/**
  * [Link] config def.
  */
 val linkConfig = ConfigInfo(
@@ -400,7 +564,7 @@ val linkConfig = ConfigInfo(
  */
 val ajaxLinkConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = AjaxLink::class),
-    parent = abstractLinkConfig,
+    parent = componentConfig,
     isConfigOnly = false,
     props = listOf(
         PropInfo(
@@ -466,7 +630,7 @@ val ajaxFallbackLinkConfig = ConfigInfo(
  */
 val ajaxSubmitLinkConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = AjaxSubmitLink::class),
-    parent = abstractLinkConfig,
+    parent = componentConfig,
     isConfigOnly = false,
     props = listOf(
         PropInfo(
@@ -513,6 +677,16 @@ val checkConfig = ConfigInfo(
         )
     )
 )
+
+///**
+// * [CheckGroup] config def.
+// */
+//val checkGroupConfig = ConfigInfo(
+//    componentInfo = ComponentInfo(target = CheckGroup::class),
+//    modelInfo = ModelInfo(target = Collection::class),
+//    parent = formComponentConfig,
+//    tagInfo = TagInfo(tagName = "span")
+//)
 
 /**
  * [DropDownChoice] config def.
@@ -686,7 +860,11 @@ val listViewConfig = ConfigInfo(
  */
 val localDateTextFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = LocalDateTextField::class),
-    modelInfo = ModelInfo(target = LocalDate::class, nullable = true, type = TargetType.Exact), // generate a T parameter if the target is nullable
+    modelInfo = ModelInfo(
+        target = LocalDate::class,
+        nullable = true,
+        type = TargetType.Exact
+    ), // generate a T parameter if the target is nullable
     parent = formComponentConfig,
     props = listOf(
         PropInfo(
@@ -765,6 +943,116 @@ val localDateTimeTextFieldConfig = ConfigInfo(
             name = "timeStyle",
             type = { FormatStyle::class.asTypeName().copy(nullable = true) },
             desc = { "how to format the time portion of the datetime" }
+        )
+    )
+)
+
+/**
+ * [MediaComponent] config def.
+ */
+val mediaComponentConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = MediaComponent::class),
+    parent = componentConfig,
+    props = listOf(
+        PropInfo(
+            name = "resRef",
+            type = { ResourceReference::class.asTypeName().nullable() },
+            desc = { "reference to the media resource" }
+        ),
+        PropInfo(
+            name = "url",
+            type = { nullableStringTypeName },
+            desc = { "url to the media" }
+        ),
+        PropInfo(
+            name = "pageParams",
+            type = { PageParameters::class.asTypeName().copy(nullable = true) },
+            desc = { "parameters for the page" }
+        ),
+        PropInfo(
+            name = "isMuted",
+            type = { nullableBooleanTypeName },
+            desc = { "whether the media is muted" }
+        ),
+        PropInfo(
+            name = "hasControls",
+            type = { nullableBooleanTypeName },
+            desc = { "whether the media has controls" }
+        ),
+        PropInfo(
+            name = "preload",
+            type = { MediaComponent.Preload::class.asTypeName().nullable() },
+            desc = { "how the media is preloaded" }
+        ),
+        PropInfo(
+            name = "isAutoPlay",
+            type = { nullableBooleanTypeName },
+            desc = { "whether the media will start automatically" }
+        ),
+        PropInfo(
+            name = "isLooping",
+            type = { nullableBooleanTypeName },
+            desc = { "whether the media should start over when it finishes" }
+        ),
+        PropInfo(
+            name = "startTime",
+            type = { nullableStringTypeName },
+            desc = { "where in the media to start playing" }
+        ),
+        PropInfo(
+            name = "endTime",
+            type = { nullableStringTypeName },
+            desc = { "where in the media to stop playing" }
+        ),
+        PropInfo(
+            name = "mediaGroup",
+            type = { nullableStringTypeName },
+            desc = { "name of the group the media is part of" }
+        ),
+        PropInfo(
+            name = "crossOrigin",
+            type = { MediaComponent.Cors::class.asTypeName().nullable() },
+            desc = { "CORS type" }
+        ),
+        PropInfo(
+            name = "type",
+            type = { nullableStringTypeName },
+            desc = { "type of the media" }
+        )
+    )
+)
+
+/**
+ * [Audio] config def.
+ */
+val audioConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = Audio::class),
+    parent = mediaComponentConfig,
+    tagInfo = TagInfo(tagName = "audio")
+)
+
+/**
+ * [Video] config def.
+ */
+val videoConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = Video::class),
+    parent = mediaComponentConfig,
+    tagInfo = TagInfo(tagName = "video"),
+    props = listOf(
+        PropInfo(
+            name = "width",
+            type = { Int::class.asTypeName().nullable() },
+            desc = { "width of the video playback" }
+        ),
+        PropInfo(
+            name = "height",
+            type = { Int::class.asTypeName().nullable() },
+            desc = { "width of the video playback" }
+        ),
+        PropInfo(
+            name = "poster",
+            type = { ResourceReference::class.asTypeName().nullable() },
+            desc = { "reference to the resource for an image representing the video" }
         )
     )
 )
@@ -911,6 +1199,58 @@ val submitLinkConfig = ConfigInfo(
 )
 
 /**
+ * [TimeField] config def.
+ */
+val timeFieldConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = TimeField::class),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = LocalTime::class, nullable = true),
+    parent = formComponentConfig,
+    props = listOf(
+        PropInfo(
+            name = "use12HourFormat",
+            type = { nullableBooleanTypeName },
+            desc = { "whether the time is displayed and parsed in a 12-hour format" }
+        )
+    )
+)
+
+/**
+ * [ZonedDateTimeField] config def.
+ */
+val zonedDateTimeFieldConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = ZonedDateTimeField::class),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = ZonedDateTime::class, nullable = true),
+    parent = formComponentConfig,
+    props = listOf(
+        PropInfo(
+            name = "toLocalDate",
+            type = {
+                LambdaTypeName.get(
+                    returnType = LocalDate::class.asTypeName(),
+                    parameters = *arrayOf(ZonedDateTime::class.asTypeName())
+                ).nullable()
+            },
+            desc = { "how to extract a LocalDate object from a LocalDateTime object" }
+        ),
+        PropInfo(
+            name = "toLocalTime",
+            type = {
+                LambdaTypeName.get(
+                    returnType = LocalTime::class.asTypeName(),
+                    parameters = *arrayOf(ZonedDateTime::class.asTypeName())
+                ).nullable()
+            },
+            desc = { "how to extract a LocalDate object from a LocalDateTime object" }
+        ),
+        PropInfo(
+            name = "defaultTime",
+            type = { LambdaTypeName.get(returnType = LocalTime::class.asTypeName()).nullable() },
+            desc = { "how to create a default LocalTime object" }
+        )
+    )
+)
+
+/**
  * [List] of all of the component config defs.
  */
 val allComponents = listOf(
@@ -921,19 +1261,21 @@ val allComponents = listOf(
     webMarkupContainerConfig,
     abstractButtonConfig,
     buttonConfig,
+    ajaxButtonConfig,
     ajaxFallbackButtonConfig,
     formComponentConfig,
+    textAreaConfig,
     textFieldConfig,
     ajaxLinkConfig,
     checkBoxConfig,
     abstractLinkConfig,
+    externalLinkConfig,
     linkConfig,
     bookmarkablePageLinkConfig,
     ajaxFallbackLinkConfig,
     ajaxSubmitLinkConfig,
     checkConfig,
     dropDownChoiceConfig,
-    //emailLinkConfig,
     feedbackPanelConfig,
     abstractImageConfig,
     imageConfig,
@@ -949,5 +1291,13 @@ val allComponents = listOf(
     radioGroupConfig,
     selectConfig,
     statelessLinkConfig,
-    submitLinkConfig
+    submitLinkConfig,
+    abstractFormConfig,
+    formConfig,
+    statelessFormConfig,
+    timeFieldConfig,
+    zonedDateTimeFieldConfig,
+    mediaComponentConfig,
+    audioConfig,
+    videoConfig
 )

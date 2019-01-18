@@ -189,7 +189,8 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
                         """return %T(id = id, block = block, factory = { cid, config -> config.%T(cid) }, config = %L)""",
                         toClassName(generatorInfo.includeFactory), toClassName(generatorInfo.factoryMethod),
                         CodeBlock.of(
-                            """%T(${props.joinToString(", ") { "${it.name} = ${it.name}" }})""", toInvokeConfigClassName(isModelParameterNamed) // toClassName(generatorInfo.configClass)
+                            """%T(${props.joinToString(", ") { "${it.name} = ${it.name}" }})""",
+                            toInvokeConfigClassName(isModelParameterNamed) // toClassName(generatorInfo.configClass)
                         )
                     )
                 )
@@ -223,13 +224,18 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
         else null
 
     private fun ConfigInfo.targetWithGeneric(isModelParameterNamed: Boolean) =
-        componentInfo.target.asTypeName().parameterizedBy(if (componentInfo.isTargetParameterizedByModel) toModelTypeVarName(isModelParameterNamed) else null)
+        componentInfo.target.asTypeName().parameterizedBy(
+            if (componentInfo.isTargetParameterizedByModel) toModelTypeVarName(
+                isModelParameterNamed
+            ) else null
+        )
 
     private fun ConfigInfo.toConfigInterfaceName() = toClassName(generatorInfo.configInterface)
     private fun ConfigInfo.toConfigClassName() = toClassName(generatorInfo.configClass)
 
-    private fun ConfigInfo.toInvokeConfigClassName(isModelParameterNamed: Boolean) = toClassName(generatorInfo.configClass)
-        .parameterizedBy(if (isModelParameterNamed || (parent?.componentInfo?.isTargetParameterizedByModel == true)) null else if (modelInfo.type == TargetType.Exact && modelInfo.nullable) modelInfo.target.asTypeName().nullable() else null)
+    private fun ConfigInfo.toInvokeConfigClassName(isModelParameterNamed: Boolean) =
+        toClassName(generatorInfo.configClass)
+            .parameterizedBy(if (isModelParameterNamed || (parent?.componentInfo?.isTargetParameterizedByModel == true)) null else if (modelInfo.type == TargetType.Exact && modelInfo.nullable) modelInfo.target.asTypeName().nullable() else null)
 
     private fun ConfigInfo.toTagClassName() = toClassName(generatorInfo.tagClass)
 
@@ -242,7 +248,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
     private val ConfigInfo.configInterfaceTypeName: TypeName
         get() = toConfigInterfaceName().parameterizedBy(if (modelInfo.isUseTypeVar) generatorInfo.toModelTypeVarName() else null)
 
-    private fun ConfigInfo.toTagSuperClass() =  toClassName(generatorInfo.baseTagClass)
+    private fun ConfigInfo.toTagSuperClass() = toClassName(generatorInfo.baseTagClass)
         .parameterizedBy(
             toSuperInterfaceModelParameter() ?: modelInfo.target.asClassName(),
             toSuperInterfaceComponentParameter(),
@@ -342,7 +348,17 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
     }
 
     private fun ConfigInfo.addTypeVar(builder: TypeSpec.Builder, type: ParamType) = when (type) {
-        ParamType.Component -> builder.addTypeVariable(generatorInfo.toComponentTypeVarName())
+        ParamType.Component -> builder.addTypeVariable(
+            generatorInfo.toComponentTypeVarName()
+                .copy(
+                    bounds = listOf(
+                        componentInfo.target.asTypeName().parameterizedBy(
+                            if (componentInfo.isTargetParameterizedByModel) WildcardTypeName.consumerOf(generatorInfo.toModelTypeVarName())
+                            else null
+                        )
+                    )
+                )
+        )
             .addKdoc(generatorInfo.componentParam.toKdocValue())
         ParamType.Model -> builder.addTypeVariable(
             generatorInfo.toModelTypeVarName()

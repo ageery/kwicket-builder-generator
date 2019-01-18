@@ -103,7 +103,7 @@ class ComponentInfo(
  */
 class ModelInfo(
     val type: TargetType = TargetType.Unbounded,
-    val target: KClass<*> = Any::class,
+    val target: KClass<*> = Any::class, // FIXME: this needs to change to TypeName & it needs to be a
     val nullable: Boolean = true
 )
 
