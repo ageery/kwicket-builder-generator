@@ -81,7 +81,7 @@ val componentConfig = ConfigInfo(
             type = {
                 IModel::class.asTypeName()
                     .parameterizedBy(
-                        if (modelInfo.isExactlyOneType) modelInfo.target
+                        if (modelInfo.isExactlyOneType || modelInfo.genericType != null) modelInfo.target.invoke(it)
                         else it.modelTypeName
                     ).copy(nullable = this.modelInfo.nullable && (!it.type.isMethod))
             },
@@ -147,8 +147,13 @@ val componentConfig = ConfigInfo(
             type = {
                 LambdaTypeName.get(
                     returnType = Unit::class.asTypeName(),
-                    receiver = if (isConfigOnly) TypeVariableName(it.generatorInfo.componentParam.name) else componentInfo.target.asClassName()
-                        .parameterizedBy(if (componentInfo.isTargetParameterizedByModel) it.modelTypeName else null)
+                    receiver =
+                    if (isConfigOnly) TypeVariableName(it.generatorInfo.componentParam.name)
+                    else componentInfo.target.asClassName().parameterizedBy(
+                        if (componentInfo.isTargetParameterizedByModel)
+                            if (it.isModelParameterNamed) it.modelTypeName else STAR
+                        else null
+                    )
                 ).copy(nullable = this.modelInfo.nullable)
             },
             desc = { "optional lambda to execute in the onConfigure lifecycle method" }
@@ -293,11 +298,11 @@ val formComponentConfig = ConfigInfo(
                 IValidator::class.asTypeName()
                     .parameterizedBy(
                         when {
-                            modelInfo.isExactlyOneType -> modelInfo.target
+                            modelInfo.isExactlyOneType -> modelInfo.target.invoke(it)
                             it.isModelParameterNamed -> it.modelTypeName
-                            modelInfo.type == TargetType.Exact -> modelInfo.target
+                            modelInfo.type == TargetType.Exact -> modelInfo.target.invoke(it)
                             it.modelTypeName == STAR -> Any::class.asTypeName().nullable()
-                            else -> null
+                            else -> Any::class.asTypeName().nullable()
                         }
                     ).nullable()
             },
@@ -310,11 +315,11 @@ val formComponentConfig = ConfigInfo(
                     IValidator::class.asTypeName()
                         .parameterizedBy(
                             when {
-                                modelInfo.isExactlyOneType -> modelInfo.target
+                                modelInfo.isExactlyOneType -> modelInfo.target.invoke(it)
                                 it.isModelParameterNamed -> it.modelTypeName
-                                modelInfo.type == TargetType.Exact -> modelInfo.target
+                                modelInfo.type == TargetType.Exact -> modelInfo.target.invoke(it)
                                 it.modelTypeName == STAR -> Any::class.asTypeName().nullable()
-                                else -> null
+                                else -> Any::class.asTypeName().nullable()
                             }
                         )
                 ).nullable()
@@ -348,7 +353,7 @@ val textFieldConfig = ConfigInfo(
 val abstractButtonConfig = ConfigInfo(
     basename = "AbstractButton",
     componentInfo = ComponentInfo(target = Button::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = nullableStringTypeName),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = { nullableStringTypeName }),
     tagInfo = TagInfo(tagName = "button"),
     isConfigOnly = true,
     parent = componentConfig,
@@ -368,7 +373,7 @@ val ajaxButtonConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = AjaxButton::class),
     modelInfo = ModelInfo(
         type = TargetType.Exact,
-        target = nullableStringTypeName
+        target = { nullableStringTypeName }
     ),
     parent = abstractButtonConfig,
     isConfigOnly = false,
@@ -410,7 +415,7 @@ val ajaxFallbackButtonConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = AjaxFallbackButton::class),
     modelInfo = ModelInfo(
         type = TargetType.Exact,
-        target = nullableStringTypeName
+        target = { nullableStringTypeName }
     ),
     parent = abstractButtonConfig,
     isConfigOnly = false,
@@ -451,7 +456,7 @@ val ajaxFallbackButtonConfig = ConfigInfo(
 val buttonConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = Button::class),
     parent = abstractButtonConfig,
-    modelInfo = ModelInfo(type = TargetType.Exact, target = nullableStringTypeName),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = { nullableStringTypeName }),
     props = listOf(
         PropInfo(
             name = "onSubmit",
@@ -481,7 +486,7 @@ val buttonConfig = ConfigInfo(
  */
 val checkBoxConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = CheckBox::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = Boolean::class.asTypeName(), nullable = false),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = { Boolean::class.asTypeName() }, nullable = false),
     parent = formComponentConfig,
     tagInfo = TagInfo(tagName = "input", attrs = mapOf("type" to "checkbox"))
 )
@@ -509,7 +514,7 @@ val abstractLinkConfig = ConfigInfo(
  */
 val externalLinkConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = ExternalLink::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = nullableStringTypeName),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = { nullableStringTypeName }),
     parent = componentConfig,
     props = listOf(
         PropInfo(
@@ -678,15 +683,25 @@ val checkConfig = ConfigInfo(
     )
 )
 
-///**
-// * [CheckGroup] config def.
-// */
-//val checkGroupConfig = ConfigInfo(
-//    componentInfo = ComponentInfo(target = CheckGroup::class),
-//    modelInfo = ModelInfo(target = Collection::class),
-//    parent = formComponentConfig,
-//    tagInfo = TagInfo(tagName = "span")
-//)
+
+// FIXME: to make this work
+// 1) extend from component not formcomponent
+// 2) need a way to say: generic in T, but the model is Collection<T>
+// currently, it generates T : Collection<T>
+// FIXME: one more field in ModelInfo -- something like another type -- Unbounded but modeled?
+// or something like: generic restriction -- and have it usually default to target
+/**
+ * [CheckGroup] config def.
+ */
+val checkGroupConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = CheckGroup::class),
+    modelInfo = ModelInfo(type = TargetType.Exact, nullable = false, target = {
+        Collection::class.asClassName().parameterizedBy(if (isModelParameterNamed) modelTypeName else STAR)
+    }, genericType = { /*this.modelTypeName*/ /*if (isModelParameterNamed) modelTypeName else*/ /*if (type == GeneratorType.IncludeMethod) modelTypeName else*/ Any::class.asTypeName().nullable() }),
+    //parent = formComponentConfig,
+    parent = componentConfig,
+    tagInfo = TagInfo(tagName = "span")
+)
 
 /**
  * [DropDownChoice] config def.
@@ -729,7 +744,7 @@ val dropDownChoiceConfig = ConfigInfo(
  */
 val feedbackPanelConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = FeedbackPanel::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = Unit::class.asClassName(), nullable = false),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = { Unit::class.asClassName() }, nullable = false),
     parent = componentConfig,
     props = listOf(
         PropInfo(
@@ -746,8 +761,10 @@ val feedbackPanelConfig = ConfigInfo(
  */
 val fileUploadFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = FileUploadField::class),
-    modelInfo = ModelInfo(type = TargetType.Exact,
-        target = MutableList::class.asClassName().parameterizedBy(FileUpload::class.asTypeName()), nullable = false),
+    modelInfo = ModelInfo(
+        type = TargetType.Exact,
+        target = { MutableList::class.asClassName().parameterizedBy(FileUpload::class.asTypeName()) }, nullable = false
+    ),
     parent = formComponentConfig
 )
 
@@ -872,7 +889,7 @@ val listViewConfig = ConfigInfo(
 val localDateTextFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = LocalDateTextField::class),
     modelInfo = ModelInfo(
-        target = LocalDate::class.asClassName().nullable(),
+        target = { LocalDate::class.asClassName().nullable() },
         type = TargetType.Exact
     ),
     parent = formComponentConfig,
@@ -900,7 +917,7 @@ val localDateTextFieldConfig = ConfigInfo(
  */
 val localDateTimeFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = LocalDateTimeField::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = LocalDateTime::class.asClassName().nullable()),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = { LocalDateTime::class.asClassName().nullable() }),
     parent = formComponentConfig,
     props = listOf(
         PropInfo(
@@ -936,7 +953,7 @@ val localDateTimeFieldConfig = ConfigInfo(
  */
 val localDateTimeTextFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = LocalDateTimeTextField::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = LocalDateTime::class.asClassName().nullable()),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = { LocalDateTime::class.asClassName().nullable() }),
     parent = formComponentConfig,
     props = listOf(
         PropInfo(
@@ -1126,7 +1143,7 @@ val radioConfig = ConfigInfo(
         ),
         PropInfo(
             name = "group",
-            type = { RadioGroup::class.asTypeName().parameterizedBy(it.modelTypeName).nullable() },
+            type = { RadioGroup::class.asTypeName().parameterizedBy(if (it.isModelParameterNamed) it.generatorInfo.toModelTypeVarName() else STAR).nullable() },
             desc = { "radio group the radio button belongs to" }
         )
     ),
@@ -1163,7 +1180,7 @@ val statelessLinkConfig = ConfigInfo(
             name = "onClick",
             type = {
                 LambdaTypeName.get(
-                    receiver = StatelessLink::class.asTypeName().parameterizedBy(it.modelTypeName),
+                    receiver = StatelessLink::class.asTypeName().parameterizedBy(if (it.isModelParameterNamed) it.generatorInfo.toModelTypeVarName() else STAR),
                     returnType = Unit::class.asTypeName()
                 )
             },
@@ -1213,7 +1230,7 @@ val submitLinkConfig = ConfigInfo(
  */
 val timeFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = TimeField::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = LocalTime::class.asClassName().nullable()),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = { LocalTime::class.asClassName().nullable() }),
     parent = formComponentConfig,
     props = listOf(
         PropInfo(
@@ -1229,7 +1246,7 @@ val timeFieldConfig = ConfigInfo(
  */
 val zonedDateTimeFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = ZonedDateTimeField::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = ZonedDateTime::class.asClassName().nullable()),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = { ZonedDateTime::class.asClassName().nullable() }),
     parent = formComponentConfig,
     props = listOf(
         PropInfo(
@@ -1310,5 +1327,6 @@ val allComponents = listOf(
     mediaComponentConfig,
     audioConfig,
     videoConfig,
-    fileUploadFieldConfig
+    fileUploadFieldConfig,
+    checkGroupConfig
 )

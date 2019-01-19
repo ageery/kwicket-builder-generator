@@ -102,21 +102,32 @@ class ComponentInfo(
  * @property type the type of the model -- unbounded or restricted
  * @property target class of the model
  * @property nullable whether the object of the model is nullable
+ * @property genericType optional lambda for creating the generic type of the component
  */
 class ModelInfo(
     val type: TargetType = TargetType.Unbounded,
-    val target: TypeName = Any::class.asTypeName().nullable(),
-    val nullable: Boolean = true
+    val target: TypeContext.() -> TypeName = { Any::class.asTypeName().nullable() },
+    val nullable: Boolean = true,
+    val genericType: (TypeContext.() -> TypeName)? = null
 )
+
+/**
+ * Returns the generic type for the [ModelInfo].
+ *
+ * @receiver [ModelInfo] to get the generic type for
+ * @param typeContext context for the type
+ * @return generic type for the model info
+ */
+fun ModelInfo.derivedGenericType(typeContext: TypeContext): TypeName = genericType?.invoke(typeContext) ?: target(typeContext)
 
 /**
  * Whether the [ModelInfo] uses the type variable.
  */
 val ModelInfo.isUseTypeVar: Boolean
-    get() = type == TargetType.Unbounded || nullable
+    get() = type == TargetType.Unbounded || nullable || genericType != null
 
 /**
  * Whether the [ModelInfo] specifies exactly one type.
  */
 val ModelInfo.isExactlyOneType: Boolean
-    get() = type == TargetType.Exact && (!nullable)
+    get() = type == TargetType.Exact && (!nullable) && (genericType == null)
