@@ -381,7 +381,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
             .addKdoc(generatorInfo.componentParam.toKdocValue())
         ParamType.Model -> builder.addTypeVariable(
             generatorInfo.toModelTypeVarName()
-                .copy(bounds = listOf(/*modelInfo.target.invoke(typeContext))*/modelInfo.derivedGenericType(typeContext)))
+                .copy(bounds = listOf(/*modelInfo.target.invoke(typeContext))*/ modelInfo.derivedGenericType(typeContext)))
         )
             .addKdoc(generatorInfo.modelParam.toKdocValue())
     }

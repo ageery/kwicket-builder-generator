@@ -757,13 +757,12 @@ val feedbackPanelConfig = ConfigInfo(
 
 /**
  * [FileUploadField] config def.
- * FIXME: why does MutableList::class.asClassName() -> List not MutableList?
  */
 val fileUploadFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = FileUploadField::class),
     modelInfo = ModelInfo(
         type = TargetType.Exact,
-        target = { MutableList::class.asClassName().parameterizedBy(FileUpload::class.asTypeName()) }, nullable = false
+        target = { mutableListTypeName.parameterizedBy(FileUpload::class.asTypeName()) }, nullable = false
     ),
     parent = formComponentConfig
 )
@@ -867,7 +866,11 @@ val inlineImageConfig = ConfigInfo(
  */
 val listViewConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = ListView::class),
+    modelInfo = ModelInfo(type = TargetType.Unbounded, nullable = true, target = {
+        List::class.asTypeName().parameterizedBy(if (isModelParameterNamed) modelTypeName else STAR) },
+        genericType = { Any::class.asTypeName().nullable() }),
     parent = componentConfig,
+    isConfigOnly = false,
     props = listOf(
         PropInfo(
             name = "populateItem",
@@ -1308,7 +1311,7 @@ val allComponents = listOf(
     imageConfig,
     sourceConfig,
     inlineImageConfig,
-    listViewConfig,
+    //listViewConfig,
     localDateTextFieldConfig,
     localDateTimeTextFieldConfig,
     localDateTimeFieldConfig,

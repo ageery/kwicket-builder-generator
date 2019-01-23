@@ -15,6 +15,7 @@ internal val stringMapTypeName = Map::class.asTypeName().parameterizedBy(stringT
 internal val nullableStringModelTypeName =
     IModel::class.asTypeName().parameterizedBy(String::class.asTypeName()).copy(nullable = true)
 internal val visitMethod = ClassName("kotlinx.html", "visit")
+internal val mutableListTypeName = ClassName("kotlin.collections", "MutableList")
 
 // props
 
