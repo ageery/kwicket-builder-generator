@@ -124,6 +124,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
      * @receiver the [ConfigInfo] to convert into an HTML tag method
      */
     fun ConfigInfo.toTagMethod(isModelParameterNamed: Boolean = true) {
+        val typeContext = toTypeContext(generatorType = GeneratorType.TagMethod,  isModelParameterNamed = isModelParameterNamed)
         builder.addFunction(
             FunSpec.builder(generatorInfo.tagMethod.toName(this)).apply {
                 addKdoc("${tagMethodKdoc(generatorInfo)}\n\n")
@@ -153,8 +154,8 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
                 addCode(
                     CodeBlock.of(
                         """%T(id = id, tagName = tagName, initialAttributes = initialAttributes, consumer = consumer, config = %T(%L)).%T(%L)""",
-                        toTagClassName(), toConfigClassName(),
-                        allProps.joinToString(", ") { "${it.name} = ${it.name}" }, visitMethod, blockParmName
+                        toTagClassName(), toConfigClassNameFromTagMethod(typeContext),
+                        props.joinToString(", ") { "${it.name} = ${it.name}" }, visitMethod, blockParmName
                     )
                 )
             }.build()
@@ -254,6 +255,8 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
 
     private fun ConfigInfo.toConfigInterfaceName() = toClassName(generatorInfo.configInterface)
     private fun ConfigInfo.toConfigClassName() = toClassName(generatorInfo.configClass)
+    private fun ConfigInfo.toConfigClassNameFromTagMethod(typeContext: TypeContext) =
+        toClassName(generatorInfo.configClass).parameterizedBy(if (typeContext.isModelParameterNamed) null else this.modelInfo.target.invoke(typeContext))
 
     private fun ConfigInfo.toInvokeConfigClassName(typeContext: TypeContext) =
         toClassName(generatorInfo.configClass)

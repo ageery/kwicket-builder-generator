@@ -597,11 +597,11 @@ val bookmarkablePageLinkConfig = ConfigInfo(
         PropInfo(
             name = "pageClass",
             desc = { "class of the page the link references" },
-            type = { KClass::class.asTypeName().parameterizedBy(WildcardTypeName.producerOf(Page::class.asTypeName())) }
+            type = { KClass::class.asTypeName().parameterizedBy(WildcardTypeName.producerOf(Page::class.asTypeName())).nullable() }
         ),
         PropInfo(
             name = "pageParams",
-            type = { PageParameters::class.asTypeName() },
+            type = { PageParameters::class.asTypeName().nullable() },
             desc = { "parameters to pass to the link" }
         )
     )
@@ -695,7 +695,7 @@ val checkConfig = ConfigInfo(
  */
 val checkGroupConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = CheckGroup::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, nullable = false, target = {
+    modelInfo = ModelInfo(type = TargetType.Exact, target = {
         Collection::class.asClassName().parameterizedBy(if (isModelParameterNamed) modelTypeName else STAR)
     }, genericType = { /*this.modelTypeName*/ /*if (isModelParameterNamed) modelTypeName else*/ /*if (type == GeneratorType.IncludeMethod) modelTypeName else*/ Any::class.asTypeName().nullable() }),
     //parent = formComponentConfig,
@@ -719,7 +719,7 @@ val dropDownChoiceConfig = ConfigInfo(
                             List::class.asTypeName()
                                 .parameterizedBy(if (it.isModelParameterNamed) it.generatorInfo.toModelTypeVarName() else STAR)
                         )
-                    )
+                    ).nullable()
             },
             desc = { "choices for the drop down" }
         ),
@@ -732,7 +732,7 @@ val dropDownChoiceConfig = ConfigInfo(
                             it.generatorInfo.toModelTypeVarName()
                         else Any::class.asTypeName().nullable()
                     )
-                )
+                ).nullable()
             },
             desc = { "how to render the drop down choices" }
         )
@@ -744,7 +744,7 @@ val dropDownChoiceConfig = ConfigInfo(
  */
 val feedbackPanelConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = FeedbackPanel::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = { Unit::class.asClassName() }, nullable = false),
+    modelInfo = ModelInfo(type = TargetType.Unbounded),
     parent = componentConfig,
     props = listOf(
         PropInfo(
@@ -762,7 +762,7 @@ val fileUploadFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = FileUploadField::class),
     modelInfo = ModelInfo(
         type = TargetType.Exact,
-        target = { mutableListTypeName.parameterizedBy(FileUpload::class.asTypeName()) }, nullable = false
+        target = { mutableListTypeName.parameterizedBy(FileUpload::class.asTypeName()) }
     ),
     parent = formComponentConfig
 )
