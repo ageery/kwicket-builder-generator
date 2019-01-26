@@ -12,6 +12,8 @@ import org.apache.wicket.ajax.markup.html.form.AjaxFallbackButton
 import org.apache.wicket.ajax.markup.html.form.AjaxSubmitLink
 import org.apache.wicket.behavior.Behavior
 import org.apache.wicket.devutils.debugbar.DebugBar
+import org.apache.wicket.extensions.ajax.markup.html.IndicatingAjaxButton
+import org.apache.wicket.extensions.ajax.markup.html.IndicatingAjaxFallbackLink
 import org.apache.wicket.extensions.markup.html.form.datetime.*
 import org.apache.wicket.extensions.markup.html.form.select.Select
 import org.apache.wicket.feedback.IFeedbackMessageFilter
@@ -409,6 +411,48 @@ val ajaxButtonConfig = ConfigInfo(
 )
 
 /**
+ * [IndicatingAjaxButton] config def.
+ */
+val indicatingAjaxButtonConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = IndicatingAjaxButton::class),
+    modelInfo = ModelInfo(
+        type = TargetType.Exact,
+        target = { nullableStringTypeName }
+    ),
+    parent = abstractButtonConfig,
+    isConfigOnly = false,
+    props = listOf(
+        PropInfo(
+            name = "form",
+            type = { Form::class.asTypeName().parameterizedBy(STAR).nullable() },
+            desc = { "form the button is associated with" }
+        ),
+        PropInfo(
+            name = "onSubmit",
+            type = {
+                LambdaTypeName.get(
+                    receiver = AjaxButton::class.asTypeName(),
+                    parameters = * arrayOf(AjaxRequestTarget::class.asTypeName()),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "submit handler lambda" }
+        ),
+        PropInfo(
+            name = "onError",
+            type = {
+                LambdaTypeName.get(
+                    receiver = AjaxButton::class.asTypeName(),
+                    parameters = * arrayOf(AjaxRequestTarget::class.asTypeName()),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "error handler lambda" }
+        )
+    )
+)
+
+/**
  * [AjaxFallbackButton] config def.
  */
 val ajaxFallbackButtonConfig = ConfigInfo(
@@ -595,12 +639,12 @@ val bookmarkablePageLinkConfig = ConfigInfo(
     parent = abstractLinkConfig,
     props = listOf(
         PropInfo(
-            name = "pageClass",
+            name = "page",
             desc = { "class of the page the link references" },
             type = { KClass::class.asTypeName().parameterizedBy(WildcardTypeName.producerOf(Page::class.asTypeName())).nullable() }
         ),
         PropInfo(
-            name = "pageParams",
+            name = "params",
             type = { PageParameters::class.asTypeName().nullable() },
             desc = { "parameters to pass to the link" }
         )
@@ -612,6 +656,29 @@ val bookmarkablePageLinkConfig = ConfigInfo(
  */
 val ajaxFallbackLinkConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = AjaxFallbackLink::class),
+    parent = abstractLinkConfig,
+    isConfigOnly = false,
+    props = listOf(
+        PropInfo(
+            name = "onClick",
+            type = {
+                LambdaTypeName.get(
+                    receiver = AjaxFallbackLink::class.asTypeName()
+                        .parameterizedBy(if (it.isModelParameterNamed) generatorInfo.toModelTypeVarName() else STAR),
+                    parameters = * arrayOf(AjaxRequestTarget::class.asTypeName().copy(nullable = true)),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "click handler lambda" }
+        )
+    )
+)
+
+/**
+ * [IndicatingAjaxFallbackLink] config def.
+ */
+val indicatingAjaxFallbackLinkConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = IndicatingAjaxFallbackLink::class),
     parent = abstractLinkConfig,
     isConfigOnly = false,
     props = listOf(
@@ -1185,7 +1252,7 @@ val statelessLinkConfig = ConfigInfo(
                 LambdaTypeName.get(
                     receiver = StatelessLink::class.asTypeName().parameterizedBy(if (it.isModelParameterNamed) it.generatorInfo.toModelTypeVarName() else STAR),
                     returnType = Unit::class.asTypeName()
-                )
+                ).nullable()
             },
             desc = { "link click handler lambda" }
         )
@@ -1292,6 +1359,7 @@ val allComponents = listOf(
     abstractButtonConfig,
     buttonConfig,
     ajaxButtonConfig,
+    indicatingAjaxButtonConfig,
     ajaxFallbackButtonConfig,
     formComponentConfig,
     textAreaConfig,
@@ -1303,6 +1371,7 @@ val allComponents = listOf(
     linkConfig,
     bookmarkablePageLinkConfig,
     ajaxFallbackLinkConfig,
+    indicatingAjaxFallbackLinkConfig,
     ajaxSubmitLinkConfig,
     checkConfig,
     dropDownChoiceConfig,
