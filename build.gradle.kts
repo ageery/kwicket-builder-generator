@@ -28,6 +28,7 @@ repositories {
 dependencies {
     compile(kotlin("stdlib-jdk8"))
     implementation(group = "org.apache.wicket", name = "wicket-core", version = wicketVersion)
+    implementation(group = "org.apache.wicket", name = "wicket-extensions", version = wicketVersion)
     implementation(group = "org.apache.wicket", name = "wicket-devutils", version = wicketVersion)
     implementation(group = "org.jetbrains.kotlinx", name = "kotlinx-html-jvm", version = kotlinxHtmlVersion)
     implementation(group = "com.squareup", name = "kotlinpoet", version = kotlinPoetVersion)

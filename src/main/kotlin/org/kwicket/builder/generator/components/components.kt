@@ -14,6 +14,9 @@ import org.apache.wicket.behavior.Behavior
 import org.apache.wicket.devutils.debugbar.DebugBar
 import org.apache.wicket.extensions.ajax.markup.html.IndicatingAjaxButton
 import org.apache.wicket.extensions.ajax.markup.html.IndicatingAjaxFallbackLink
+import org.apache.wicket.extensions.ajax.markup.html.autocomplete.AutoCompleteSettings
+import org.apache.wicket.extensions.ajax.markup.html.autocomplete.AutoCompleteTextField
+import org.apache.wicket.extensions.ajax.markup.html.autocomplete.IAutoCompleteRenderer
 import org.apache.wicket.extensions.markup.html.form.datetime.*
 import org.apache.wicket.extensions.markup.html.form.select.Select
 import org.apache.wicket.feedback.IFeedbackMessageFilter
@@ -346,7 +349,69 @@ val textAreaConfig = ConfigInfo(
 val textFieldConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = TextField::class, isTargetParameterizedByModel = true),
     parent = formComponentConfig,
-    tagInfo = TagInfo(tagName = "input", attrs = mapOf("type" to "text"))
+    tagInfo = TagInfo(tagName = "input", attrs = mapOf("type" to "text")),
+    props = listOf(
+        PropInfo(
+            name = "type",
+            type = {
+                Class::class.asTypeName()
+                    .parameterizedBy(if (it.isModelParameterNamed) generatorInfo.toModelTypeVarName() else Any::class.asTypeName().nullable())
+                    .nullable()
+            },
+            desc = { "type of the input" }
+        )
+    )
+)
+
+/**
+ * [AutoCompleteTextField] config def.
+ */
+// FIXME: it would be nice to put all of the properties from the settings object here
+val autoCompleteTextFieldConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = AutoCompleteTextField::class, isTargetParameterizedByModel = true),
+    parent = formComponentConfig,
+    isConfigOnly = false,
+    tagInfo = TagInfo(tagName = "input", attrs = mapOf("type" to "text")),
+    props = listOf(
+        PropInfo(
+            name = "type",
+            type = {
+                Class::class.asTypeName()
+                .parameterizedBy(if (it.isModelParameterNamed) generatorInfo.toModelTypeVarName() else Any::class.asTypeName().nullable())
+                    .nullable()
+            },
+            desc = { "type of the input" }
+        ),
+        PropInfo(
+            name = "renderer",
+            type = {
+                IAutoCompleteRenderer::class.asTypeName()
+                    .parameterizedBy(if (it.isModelParameterNamed) generatorInfo.toModelTypeVarName() else Any::class.asTypeName().nullable())
+                    .nullable()
+            },
+            desc = { "how to render the autocomplete choices" }
+        ),
+        PropInfo(
+            name = "settings",
+            type = { AutoCompleteSettings::class.asTypeName().nullable() },
+            desc = { "settings for the autocomplete" }
+        ),
+        PropInfo(
+            name = "choices",
+            type = {
+                LambdaTypeName.get(
+                    receiver = AutoCompleteTextField::class.asTypeName()
+                        .parameterizedBy(if (it.isModelParameterNamed) generatorInfo.toModelTypeVarName() else Any::class.asTypeName().nullable())
+                        .nullable(),
+                    parameters = *arrayOf(String::class.asTypeName().nullable()),
+                    returnType = Sequence::class.asTypeName()
+                        .parameterizedBy(if (it.isModelParameterNamed) generatorInfo.toModelTypeVarName() else Any::class.asTypeName().nullable())
+                        .nullable()
+                ).copy(nullable = true)
+            },
+            desc = { "settings for the autocomplete" }
+        )
+    )
 )
 
 /**
@@ -641,7 +706,10 @@ val bookmarkablePageLinkConfig = ConfigInfo(
         PropInfo(
             name = "page",
             desc = { "class of the page the link references" },
-            type = { KClass::class.asTypeName().parameterizedBy(WildcardTypeName.producerOf(Page::class.asTypeName())).nullable() }
+            type = {
+                KClass::class.asTypeName().parameterizedBy(WildcardTypeName.producerOf(Page::class.asTypeName()))
+                    .nullable()
+            }
         ),
         PropInfo(
             name = "params",
@@ -762,9 +830,15 @@ val checkConfig = ConfigInfo(
  */
 val checkGroupConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = CheckGroup::class),
-    modelInfo = ModelInfo(type = TargetType.Exact, target = {
-        Collection::class.asClassName().parameterizedBy(if (isModelParameterNamed) modelTypeName else STAR)
-    }, genericType = { /*this.modelTypeName*/ /*if (isModelParameterNamed) modelTypeName else*/ /*if (type == GeneratorType.IncludeMethod) modelTypeName else*/ Any::class.asTypeName().nullable() }),
+    modelInfo = ModelInfo(
+        type = TargetType.Exact,
+        target = {
+            Collection::class.asClassName().parameterizedBy(if (isModelParameterNamed) modelTypeName else STAR)
+        },
+        genericType = {
+            /*this.modelTypeName*/ /*if (isModelParameterNamed) modelTypeName else*/ /*if (type == GeneratorType.IncludeMethod) modelTypeName else*/ Any::class.asTypeName()
+            .nullable()
+        }),
     //parent = formComponentConfig,
     parent = componentConfig,
     tagInfo = TagInfo(tagName = "span")
@@ -934,7 +1008,8 @@ val inlineImageConfig = ConfigInfo(
 val listViewConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = ListView::class),
     modelInfo = ModelInfo(type = TargetType.Unbounded, nullable = true, target = {
-        List::class.asTypeName().parameterizedBy(if (isModelParameterNamed) modelTypeName else STAR) },
+        List::class.asTypeName().parameterizedBy(if (isModelParameterNamed) modelTypeName else STAR)
+    },
         genericType = { Any::class.asTypeName().nullable() }),
     parent = componentConfig,
     isConfigOnly = false,
@@ -1213,7 +1288,11 @@ val radioConfig = ConfigInfo(
         ),
         PropInfo(
             name = "group",
-            type = { RadioGroup::class.asTypeName().parameterizedBy(if (it.isModelParameterNamed) it.generatorInfo.toModelTypeVarName() else STAR).nullable() },
+            type = {
+                RadioGroup::class.asTypeName()
+                    .parameterizedBy(if (it.isModelParameterNamed) it.generatorInfo.toModelTypeVarName() else STAR)
+                    .nullable()
+            },
             desc = { "radio group the radio button belongs to" }
         )
     ),
@@ -1364,6 +1443,7 @@ val allComponents = listOf(
     formComponentConfig,
     textAreaConfig,
     textFieldConfig,
+    autoCompleteTextFieldConfig,
     ajaxLinkConfig,
     checkBoxConfig,
     abstractLinkConfig,
