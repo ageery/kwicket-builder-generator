@@ -613,6 +613,11 @@ val abstractLinkConfig = ConfigInfo(
             name = "popupSettings",
             type = { PopupSettings::class.asTypeName().nullable() },
             desc = { "specifies how the link opens" }
+        ),
+        PropInfo(
+            name = "autoEnable",
+            type = { nullableBooleanTypeName },
+            desc = { "whether link should automatically enable/disable based on current page" }
         )
     ),
     tagInfo = TagInfo(tagName = "a")
