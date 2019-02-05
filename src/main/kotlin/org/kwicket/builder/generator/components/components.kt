@@ -5,6 +5,7 @@ import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import org.apache.wicket.Component
 import org.apache.wicket.Page
 import org.apache.wicket.ajax.AjaxRequestTarget
+import org.apache.wicket.ajax.attributes.AjaxRequestAttributes
 import org.apache.wicket.ajax.markup.html.AjaxFallbackLink
 import org.apache.wicket.ajax.markup.html.AjaxLink
 import org.apache.wicket.ajax.markup.html.form.AjaxButton
@@ -14,11 +15,14 @@ import org.apache.wicket.behavior.Behavior
 import org.apache.wicket.devutils.debugbar.DebugBar
 import org.apache.wicket.extensions.ajax.markup.html.IndicatingAjaxButton
 import org.apache.wicket.extensions.ajax.markup.html.IndicatingAjaxFallbackLink
+import org.apache.wicket.extensions.ajax.markup.html.IndicatingAjaxLink
 import org.apache.wicket.extensions.ajax.markup.html.autocomplete.AutoCompleteSettings
 import org.apache.wicket.extensions.ajax.markup.html.autocomplete.AutoCompleteTextField
 import org.apache.wicket.extensions.ajax.markup.html.autocomplete.IAutoCompleteRenderer
+import org.apache.wicket.extensions.ajax.markup.html.tabs.AjaxTabbedPanel
 import org.apache.wicket.extensions.markup.html.form.datetime.*
 import org.apache.wicket.extensions.markup.html.form.select.Select
+import org.apache.wicket.extensions.markup.html.tabs.ITab
 import org.apache.wicket.feedback.IFeedbackMessageFilter
 import org.apache.wicket.markup.html.WebMarkupContainer
 import org.apache.wicket.markup.html.basic.Label
@@ -363,6 +367,26 @@ val textFieldConfig = ConfigInfo(
     )
 )
 
+///**
+// * [TextField] config def.
+// */
+//val requiredTextFieldConfig = ConfigInfo(
+//    componentInfo = ComponentInfo(target = RequiredTextField::class, isTargetParameterizedByModel = true),
+//    parent = formComponentConfig,
+//    tagInfo = TagInfo(tagName = "input", attrs = mapOf("type" to "text")),
+//    props = listOf(
+//        PropInfo(
+//            name = "type",
+//            type = {
+//                Class::class.asTypeName()
+//                    .parameterizedBy(if (it.isModelParameterNamed) generatorInfo.toModelTypeVarName() else Any::class.asTypeName().nullable())
+//                    .nullable()
+//            },
+//            desc = { "type of the input" }
+//        )
+//    )
+//)
+
 /**
  * [AutoCompleteTextField] config def.
  */
@@ -377,7 +401,7 @@ val autoCompleteTextFieldConfig = ConfigInfo(
             name = "type",
             type = {
                 Class::class.asTypeName()
-                .parameterizedBy(if (it.isModelParameterNamed) generatorInfo.toModelTypeVarName() else Any::class.asTypeName().nullable())
+                    .parameterizedBy(if (it.isModelParameterNamed) generatorInfo.toModelTypeVarName() else Any::class.asTypeName().nullable())
                     .nullable()
             },
             desc = { "type of the input" }
@@ -560,6 +584,29 @@ val ajaxFallbackButtonConfig = ConfigInfo(
 )
 
 /**
+ * [AjaxTabbedPanel] config def.
+ */
+val ajaxTabbedPanelConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = AjaxTabbedPanel::class),
+    modelInfo = ModelInfo(
+        type = TargetType.Exact,
+        target = { Int::class.asTypeName() },
+        genericType = { ITab::class.asTypeName() }
+    ),
+    parent = componentConfig,
+    props = listOf(
+        PropInfo(
+            name = "tabs",
+            type = {
+                List::class.asTypeName()
+                    .parameterizedBy(if (it.isModelParameterNamed) generatorInfo.toModelTypeVarName() else ITab::class.asTypeName())
+            },
+            desc = { "tabs in the tab panel" }
+        )
+    )
+)
+
+/**
  * [Button] config def.
  */
 val buttonConfig = ConfigInfo(
@@ -697,6 +744,53 @@ val ajaxLinkConfig = ConfigInfo(
                 ).copy(nullable = true)
             },
             desc = { "ajax click handler" }
+        ),
+        PropInfo(
+            name = "updateAjaxAttrs",
+            type = {
+                LambdaTypeName.get(
+                    receiver = AjaxLink::class.asTypeName()
+                        .parameterizedBy(if (it.isModelParameterNamed) generatorInfo.toModelTypeVarName() else STAR),
+                    parameters = * arrayOf(AjaxRequestAttributes::class.asTypeName()),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "updates the ajax attributes" }
+        )
+    )
+)
+
+/**
+ * [IndicatingAjaxLink] config def.
+ */
+val indicatingAjaxLinkConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = IndicatingAjaxLink::class),
+    parent = componentConfig,
+    isConfigOnly = false,
+    props = listOf(
+        PropInfo(
+            name = "onClick",
+            type = {
+                LambdaTypeName.get(
+                    receiver = AjaxLink::class.asTypeName()
+                        .parameterizedBy(if (it.isModelParameterNamed) generatorInfo.toModelTypeVarName() else STAR),
+                    parameters = * arrayOf(AjaxRequestTarget::class.asTypeName()),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "ajax click handler" }
+        ),
+        PropInfo(
+            name = "updateAjaxAttrs",
+            type = {
+                LambdaTypeName.get(
+                    receiver = AjaxLink::class.asTypeName()
+                        .parameterizedBy(if (it.isModelParameterNamed) generatorInfo.toModelTypeVarName() else STAR),
+                    parameters = * arrayOf(AjaxRequestAttributes::class.asTypeName()),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "updates the ajax attributes" }
         )
     )
 )
@@ -743,6 +837,18 @@ val ajaxFallbackLinkConfig = ConfigInfo(
                 ).copy(nullable = true)
             },
             desc = { "click handler lambda" }
+        ),
+        PropInfo(
+            name = "updateAjaxAttrs",
+            type = {
+                LambdaTypeName.get(
+                    receiver = AjaxFallbackLink::class.asTypeName()
+                        .parameterizedBy(if (it.isModelParameterNamed) generatorInfo.toModelTypeVarName() else STAR),
+                    parameters = * arrayOf(AjaxRequestAttributes::class.asTypeName()),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "updates the ajax attributes" }
         )
     )
 )
@@ -822,7 +928,6 @@ val checkConfig = ConfigInfo(
         )
     )
 )
-
 
 // FIXME: to make this work
 // 1) extend from component not formcomponent
@@ -1436,6 +1541,7 @@ val zonedDateTimeFieldConfig = ConfigInfo(
  */
 val allComponents = listOf(
     componentConfig,
+    ajaxTabbedPanelConfig,
     labelConfig,
     multiLineLabelConfig,
     debugBarConfig,
@@ -1448,8 +1554,10 @@ val allComponents = listOf(
     formComponentConfig,
     textAreaConfig,
     textFieldConfig,
+//    requiredTextFieldConfig,
     autoCompleteTextFieldConfig,
     ajaxLinkConfig,
+    indicatingAjaxLinkConfig,
     checkBoxConfig,
     abstractLinkConfig,
     externalLinkConfig,
