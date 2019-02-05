@@ -41,6 +41,7 @@ import org.apache.wicket.markup.html.media.MediaComponent
 import org.apache.wicket.markup.html.media.audio.Audio
 import org.apache.wicket.markup.html.media.video.Video
 import org.apache.wicket.markup.html.panel.FeedbackPanel
+import org.apache.wicket.markup.repeater.RepeatingView
 import org.apache.wicket.model.IModel
 import org.apache.wicket.request.mapper.parameter.PageParameters
 import org.apache.wicket.request.resource.IResource
@@ -1419,6 +1420,15 @@ val radioGroupConfig = ConfigInfo(
 )
 
 /**
+ * [RepeatingView] config def.
+ */
+val repeatingViewConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = RepeatingView::class),
+    parent = componentConfig,
+    tagInfo = TagInfo(tagName = "div")
+)
+
+/**
  * [Select] config def.
  */
 val selectConfig = ConfigInfo(
@@ -1593,5 +1603,6 @@ val allComponents = listOf(
     audioConfig,
     videoConfig,
     fileUploadFieldConfig,
-    checkGroupConfig
+    checkGroupConfig,
+    repeatingViewConfig
 )
