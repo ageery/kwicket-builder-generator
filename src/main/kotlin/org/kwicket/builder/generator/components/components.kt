@@ -9,6 +9,7 @@ import org.apache.wicket.ajax.attributes.AjaxRequestAttributes
 import org.apache.wicket.ajax.markup.html.AjaxFallbackLink
 import org.apache.wicket.ajax.markup.html.AjaxLink
 import org.apache.wicket.ajax.markup.html.form.AjaxButton
+import org.apache.wicket.ajax.markup.html.form.AjaxCheckBox
 import org.apache.wicket.ajax.markup.html.form.AjaxFallbackButton
 import org.apache.wicket.ajax.markup.html.form.AjaxSubmitLink
 import org.apache.wicket.behavior.Behavior
@@ -164,7 +165,7 @@ val componentConfig = ConfigInfo(
                             if (it.isModelParameterNamed) it.modelTypeName else STAR
                         else null
                     )
-                ).copy(nullable = this.modelInfo.nullable)
+                ).copy(nullable = true)
             },
             desc = { "optional lambda to execute in the onConfigure lifecycle method" }
         )
@@ -646,6 +647,30 @@ val checkBoxConfig = ConfigInfo(
     modelInfo = ModelInfo(type = TargetType.Exact, target = { Boolean::class.asTypeName() }, nullable = false),
     parent = formComponentConfig,
     tagInfo = TagInfo(tagName = "input", attrs = mapOf("type" to "checkbox"))
+)
+
+/**
+ * [AjaxCheckBox] config def.
+ */
+val ajaxCheckBoxConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = AjaxCheckBox::class),
+    modelInfo = ModelInfo(type = TargetType.Exact, target = { Boolean::class.asTypeName() }, nullable = false),
+    parent = formComponentConfig,
+    isConfigOnly = false,
+    tagInfo = TagInfo(tagName = "input", attrs = mapOf("type" to "checkbox")),
+    props = listOf(
+        PropInfo(
+            name = "onUpdate",
+            type = {
+                LambdaTypeName.get(
+                    receiver = AjaxCheckBox::class.asTypeName(),
+                    parameters = * arrayOf(AjaxRequestTarget::class.asTypeName()),
+                    returnType = Unit::class.asTypeName()
+                ).copy(nullable = true)
+            },
+            desc = { "lambda handler when the checkbox is toggled" }
+        )
+    )
 )
 
 /**
@@ -1569,6 +1594,7 @@ val allComponents = listOf(
     ajaxLinkConfig,
     indicatingAjaxLinkConfig,
     checkBoxConfig,
+    ajaxCheckBoxConfig,
     abstractLinkConfig,
     externalLinkConfig,
     linkConfig,
