@@ -369,6 +369,16 @@ val textFieldConfig = ConfigInfo(
     )
 )
 
+/**
+ * [PasswordTextField] config def.
+ */
+val passwordTextFieldConfig = ConfigInfo(
+    componentInfo = ComponentInfo(target = PasswordTextField::class),
+    modelInfo = ModelInfo(target = { String::class.asClassName().nullable() }, nullable = true, type = TargetType.Exact),
+    parent = formComponentConfig,
+    tagInfo = TagInfo(tagName = "input", attrs = mapOf("type" to "password"))
+)
+
 ///**
 // * [TextField] config def.
 // */
@@ -1589,6 +1599,7 @@ val allComponents = listOf(
     formComponentConfig,
     textAreaConfig,
     textFieldConfig,
+    passwordTextFieldConfig,
 //    requiredTextFieldConfig,
     autoCompleteTextFieldConfig,
     ajaxLinkConfig,
