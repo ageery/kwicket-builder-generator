@@ -258,7 +258,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
     private fun ConfigInfo.toConfigClassNameFromTagMethod(typeContext: TypeContext) =
         toClassName(generatorInfo.configClass)
             .parameterizedBy(if (typeContext.isModelParameterNamed) null
-            else if (modelInfo.genericType != null) modelInfo.genericType!!(typeContext) else this.modelInfo.target.invoke(typeContext))
+            else if (modelInfo.genericType != null) (modelInfo.genericType)(typeContext) else this.modelInfo.target.invoke(typeContext))
 
     private fun ConfigInfo.toInvokeConfigClassName(typeContext: TypeContext) =
         toClassName(generatorInfo.configClass)

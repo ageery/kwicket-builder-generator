@@ -4,20 +4,18 @@ import org.jetbrains.dokka.DokkaConfiguration
 import org.jetbrains.dokka.gradle.DokkaTask
 import java.net.URL
 
-val kotlinVersion = "1.3.11"
-val wicketVersion = "8.2.0"
-val kotlinxHtmlVersion = "0.6.11"
-val kotlinPoetVersion = "1.0.1"
+val wicketVersion = "8.5.0"
+val kotlinxHtmlVersion = "0.6.12"
+val kotlinPoetVersion = "1.3.0"
 
 plugins {
-    kotlin("jvm") version "1.3.11"
-    id("org.jetbrains.dokka") version "0.9.16"
+    kotlin("jvm") version "1.3.41"
+    id("org.jetbrains.dokka") version "0.9.17"
     `maven-publish`
-    id("java-library") // see: https://youtrack.jetbrains.com/issue/KT-28355 -- fixed in 1.3.20
+    id("net.researchgate.release") version "2.8.1"
 }
 
 group = "org.kwicket"
-version = "1.0-SNAPSHOT"
 
 repositories {
     mavenLocal()
@@ -32,7 +30,7 @@ dependencies {
     implementation(group = "org.apache.wicket", name = "wicket-devutils", version = wicketVersion)
     implementation(group = "org.jetbrains.kotlinx", name = "kotlinx-html-jvm", version = kotlinxHtmlVersion)
     implementation(group = "com.squareup", name = "kotlinpoet", version = kotlinPoetVersion)
-    api(group = "org.jetbrains.kotlin", name = "kotlin-reflect", version = kotlinVersion)
+    api(group = "org.jetbrains.kotlin", name = "kotlin-reflect")
 }
 
 tasks.withType<KotlinCompile> {
