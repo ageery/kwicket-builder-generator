@@ -60,10 +60,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
                 val typeContext = toTypeContext(generatorType = GeneratorType.ConfigClass,  isModelParameterNamed = true)
                 if (isConfigOnly) {
                     addModifiers(KModifier.OPEN)
-                    addTypeVar(
-                        builder = this,
-                        type = ParamType.Component,
-                        typeContext = typeContext)
+                    addTypeVar(builder = this, type = ParamType.Component, typeContext = typeContext)
                 }
                 if (modelInfo.isUseTypeVar) addTypeVar(this, ParamType.Model, typeContext)
                 primaryConstructor(toConfigClassConstructor())
@@ -172,6 +169,7 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
         builder.addFunction(
             FunSpec.builder(generatorInfo.includeMethod.toName(this)).apply {
                 addKdoc("${includeMethodKdoc(generatorInfo)}\n\n")
+                if (isConfigOnly) addTypeVar(builder = this, type = ParamType.Component, typeContext = typeContext)
                 if (modelInfo.isUseTypeVar && isModelParameterNamed)
                     addTypeVar(builder = this, type = ParamType.Model, typeContext = typeContext)
                 receiver(MarkupContainer::class)
@@ -393,8 +391,20 @@ class KWicketBuilder(val generatorInfo: GeneratorInfo, val builder: FileSpec.Bui
 
     private fun ConfigInfo.addTypeVar(builder: FunSpec.Builder, type: ParamType, typeContext: TypeContext) =
         when (type) {
-            ParamType.Component -> builder.addTypeVariable(generatorInfo.toComponentTypeVarName())
+            ParamType.Component -> builder.addTypeVariable(
+                /*
+                builder.addTypeVariable(generatorInfo.toComponentTypeVarName())
                 .addKdoc(generatorInfo.componentParam.toKdocValue())
+                 */
+                generatorInfo.toComponentTypeVarName()
+                    .copy(
+                        bounds = listOf(
+                            componentInfo.target.asTypeName().parameterizedBy(
+                                if (componentInfo.isTargetParameterizedByModel) WildcardTypeName.consumerOf(generatorInfo.toModelTypeVarName())
+                                else null
+                            )
+                        )
+                    ))
             ParamType.Model -> builder.addTypeVariable(
                 generatorInfo.toModelTypeVarName()
                     .copy(bounds = listOf(/*modelInfo.target.invoke(typeContext)*/ modelInfo.derivedGenericType(typeContext)))

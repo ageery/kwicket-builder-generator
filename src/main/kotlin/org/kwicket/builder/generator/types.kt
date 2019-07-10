@@ -28,6 +28,7 @@ internal val includeBlockPropInfo = PropInfo(
         LambdaTypeName.get(
             receiver = toClassName(it.generatorInfo.configInterface)
                 .parameterizedBy(
+                    if (isConfigOnly) it.generatorInfo.toComponentTypeVarName() else null,
                     if (modelInfo.isExactlyOneType) null
                     else if (it.isModelParameterNamed) it.generatorInfo.toModelTypeVarName() else STAR
                 ),
