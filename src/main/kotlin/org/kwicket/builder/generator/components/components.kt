@@ -138,11 +138,6 @@ val componentConfig = ConfigInfo(
             desc = { "whether to only render the body of the component" }
         ),
         PropInfo(
-            name = "behavior",
-            type = { Behavior::class.asTypeName().copy(nullable = true) },
-            desc = { "[Behavior] to add to the component" }
-        ),
-        PropInfo(
             name = "behaviors",
             type = { List::class.parameterizedBy(Behavior::class).copy(nullable = true) },
             desc = { "list of [Behavior]s to add to the component" }
@@ -302,22 +297,6 @@ val formComponentConfig = ConfigInfo(
             name = "label",
             type = { nullableStringModelTypeName },
             desc = { "label associated with the form component" }
-        ),
-        PropInfo(
-            name = "validator",
-            type = {
-                IValidator::class.asTypeName()
-                    .parameterizedBy(
-                        when {
-                            modelInfo.isExactlyOneType -> modelInfo.target.invoke(it)
-                            it.isModelParameterNamed -> it.modelTypeName
-                            modelInfo.type == TargetType.Exact -> modelInfo.target.invoke(it)
-                            it.modelTypeName == STAR -> Any::class.asTypeName().nullable()
-                            else -> Any::class.asTypeName().nullable()
-                        }
-                    ).nullable()
-            },
-            desc = { "validator for the form component" }
         ),
         PropInfo(
             name = "validators",
