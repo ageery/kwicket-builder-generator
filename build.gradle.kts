@@ -32,13 +32,13 @@ repositories {
 }
 
 dependencies {
-    compile(kotlin("stdlib-jdk8"))
+    api(kotlin("stdlib-jdk8"))
+    api(group = "org.jetbrains.kotlin", name = "kotlin-reflect")
     implementation(group = "org.apache.wicket", name = "wicket-core", version = wicketVersion)
     implementation(group = "org.apache.wicket", name = "wicket-extensions", version = wicketVersion)
     implementation(group = "org.apache.wicket", name = "wicket-devutils", version = wicketVersion)
     implementation(group = "org.jetbrains.kotlinx", name = "kotlinx-html-jvm", version = kotlinxHtmlVersion)
     implementation(group = "com.squareup", name = "kotlinpoet", version = kotlinPoetVersion)
-    api(group = "org.jetbrains.kotlin", name = "kotlin-reflect")
 }
 
 tasks.withType<KotlinCompile> {
