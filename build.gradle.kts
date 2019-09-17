@@ -1,21 +1,29 @@
+import com.jfrog.bintray.gradle.BintrayExtension
+import groovy.lang.GroovyObject
 import org.gradle.jvm.tasks.Jar
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.dokka.DokkaConfiguration
 import org.jetbrains.dokka.gradle.DokkaTask
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jfrog.gradle.plugin.artifactory.dsl.PublisherConfig
 import java.net.URL
 
-val wicketVersion = "8.5.0"
-val kotlinxHtmlVersion = "0.6.12"
-val kotlinPoetVersion = "1.3.0"
+val publicationName = "maven"
+
+val wicketVersion: String by project
+val kotlinxHtmlVersion: String by project
+val kotlinPoetVersion: String by project
+
+val bintrayUser: String? by project
+val bintrayKey: String? by project
 
 plugins {
-    kotlin("jvm") version "1.3.41"
-    id("org.jetbrains.dokka") version "0.9.17"
+    kotlin("jvm")
     `maven-publish`
-    id("net.researchgate.release") version "2.8.1"
+    id("org.jetbrains.dokka")
+    id("net.researchgate.release")
+    id("com.jfrog.bintray")
+    id("com.jfrog.artifactory")
 }
-
-group = "org.kwicket"
 
 repositories {
     mavenLocal()
@@ -49,22 +57,58 @@ val dokkaJavadocTask = tasks.withType<DokkaTask> {
 }
 
 val sourcesJar by tasks.creating(Jar::class) {
-    classifier = "sources"
+    archiveClassifier.set("sources")
     from(sourceSets["main"].allSource)
-    setDuplicatesStrategy(DuplicatesStrategy.EXCLUDE)
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 val javadocJar by tasks.creating(Jar::class) {
     dependsOn(dokkaJavadocTask)
-    classifier = "javadoc"
+    archiveClassifier.set("javadoc")
 }
 
 publishing {
     publications {
-        create<MavenPublication>("maven") {
+        create<MavenPublication>(publicationName) {
             from(components.getByName("java"))
             artifact(sourcesJar)
             artifact(javadocJar)
         }
     }
+}
+
+bintray {
+    user = bintrayUser
+    key = bintrayKey
+    setPublications(publicationName)
+    publish = true
+    pkg(delegateClosureOf<BintrayExtension.PackageConfig> {
+        repo = "maven"
+        name = "kwicket"
+        setLicenses("Apache-2.0")
+        vcsUrl = "https://github.com/ageery/kwicket.git"
+        githubRepo = "ageery/kwicket"
+        githubReleaseNotesFile = "README.md"
+        version(delegateClosureOf<BintrayExtension.VersionConfig> {
+            name = "$version"
+            vcsTag = "kwicket-$version"
+        })
+    })
+}
+
+artifactory {
+    setContextUrl("https://oss.jfrog.org/artifactory")
+    publish(delegateClosureOf<PublisherConfig> {
+        repository(delegateClosureOf<GroovyObject> {
+            setProperty("repoKey", "oss-snapshot-local")
+            setProperty("username", bintrayUser)
+            setProperty("password", bintrayKey)
+            setProperty("maven", true)
+        })
+        defaults(delegateClosureOf<GroovyObject> {
+            invokeMethod("publications", publicationName)
+            setProperty("publishArtifacts", true)
+            setProperty("publishPom", true)
+        })
+    })
 }

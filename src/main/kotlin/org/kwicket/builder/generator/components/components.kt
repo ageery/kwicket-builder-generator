@@ -227,7 +227,14 @@ val abstractFormConfig = ConfigInfo(
  */
 val formConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = Form::class),
-    parent = abstractFormConfig
+    parent = abstractFormConfig,
+    props = listOf(
+        PropInfo(
+            name = "wantSubmitOnNestedFormSubmit",
+            type = { nullableBooleanTypeName },
+            desc = { "whether the nest form causes the outer form to be submitted" }
+        )
+    )
 )
 
 /**
@@ -235,7 +242,14 @@ val formConfig = ConfigInfo(
  */
 val statelessFormConfig = ConfigInfo(
     componentInfo = ComponentInfo(target = StatelessForm::class),
-    parent = abstractFormConfig
+    parent = abstractFormConfig,
+    props = listOf(
+        PropInfo(
+            name = "wantSubmitOnNestedFormSubmit",
+            type = { nullableBooleanTypeName },
+            desc = { "whether the nest form causes the outer form to be submitted" }
+        )
+    )
 )
 
 /**
